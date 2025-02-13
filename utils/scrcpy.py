@@ -26,8 +26,8 @@ class Scrcpy:
                 self.serial = serial
             else:
                 raise NoDeviceFound(f"{serial} device is not connected.")
-        elif Android.get_devices():
-            self.serial = Android.get_devices()[0]
+        elif all_devices:
+            self.serial = all_devices[0]
         else:
             raise NoDeviceFound("No android device found to connect.")
     
@@ -41,12 +41,12 @@ class Scrcpy:
     def stop(self) -> None:
         """Stop android mirroring"""
         if self.process:
+            self.__del__()
             log.info("Scrcpy session ended")
-            self.process.kill()
     
     def __del__(self) -> None:
         """Garbage collect the object."""
-        self.stop()
+        self.process.kill()
     
     @staticmethod
     def check_installation() -> None:

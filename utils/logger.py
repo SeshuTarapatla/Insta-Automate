@@ -14,7 +14,7 @@ install(show_locals=True)
 
 # log instance
 log = logging.getLogger()
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 
 # console for rich printing
 console = Console(
@@ -32,7 +32,7 @@ console = Console(
 
 # handler and formatter
 rich_handler = RichHandler(console=console, show_time=False, markup=True)
-rich_handler.setLevel(logging.DEBUG)
+rich_handler.setLevel(logging.INFO)
 
 formatter = logging.Formatter(": %(message)s")
 rich_handler.setFormatter(formatter)

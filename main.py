@@ -1,7 +1,5 @@
-from time import sleep
-from utils.scrcpy import Scrcpy
+from utils.kubernetes import Kubernetes
 
 
-a = Scrcpy()
-a.start()
-sleep(5)
+Kubernetes.is_running()
+print(Kubernetes.get_json("postgres-configmap", "configmap"))
