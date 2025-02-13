@@ -6,6 +6,17 @@ class Android(Device):
     """Module for all android/adb related tasks."""
 
     def __init__(self, serial: str | None = None):
+        serial = Android.get_default_serial(serial)
+        super().__init__(serial)
+
+    @staticmethod
+    def get_devices() -> list[str]:
+        """Get serials of all connected android devices in a list."""
+        return [x.serial for x in adb.iter_device()]
+
+    @staticmethod
+    def get_default_serial(serial: str | None = None) -> str:
+        """Function that checks if given serial is connected. If none given, tries to return serial of currently connected device."""
         devices = Android.get_devices()
         if serial:
             if serial not in devices:
@@ -15,13 +26,7 @@ class Android(Device):
                 serial = devices[0]
             else:
                 raise NoDeviceFound("No adb device found to connect.")
-        super().__init__(serial)
-
-    @staticmethod
-    def get_devices() -> list[str]:
-        """Get serials of all connected android devices in a list."""
-        return [x.serial for x in adb.iter_device()]
-
+        return serial
 
 class NoDeviceFound(Exception):
     """Raised when android device not found"""

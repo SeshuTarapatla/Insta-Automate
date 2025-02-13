@@ -31,7 +31,7 @@ class Kubernetes:
         """
         resp = run(f"kubectl get {kind} {name} -o jsonpath={{.data}}", capture_output=True, text=True)
         if resp.returncode == 0:
-            data: dict[str, Any] = loads(resp.stdout)
+            data: dict[str, str] = loads(resp.stdout)
             if base64decode:
                 data = {key: b64decode(value).decode() for key, value in data.items()}
             return data

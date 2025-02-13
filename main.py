@@ -1,5 +1,4 @@
-from utils.kubernetes import Kubernetes
+from app.vars import args
 
 
-Kubernetes.is_running()
-print(Kubernetes.get_json("postgres-configmap", "configmap"))
+print(args)

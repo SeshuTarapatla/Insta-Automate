@@ -5,7 +5,7 @@ from typing import cast
 
 from rich.status import Status
 
-from utils.android import Android, NoDeviceFound
+from utils.android import Android
 from utils.logger import log
 
 
@@ -20,16 +20,7 @@ class Scrcpy:
         self.delay  : float = 3
         # pre-checks for scrcpy and device
         Scrcpy.check_installation()
-        all_devices = Android.get_devices()
-        if serial:
-            if serial in all_devices:
-                self.serial = serial
-            else:
-                raise NoDeviceFound(f"{serial} device is not connected.")
-        elif all_devices:
-            self.serial = all_devices[0]
-        else:
-            raise NoDeviceFound("No android device found to connect.")
+        self.serial = Android.get_default_serial(serial)
     
     def start(self) -> None:
         """Start android mirroring."""
