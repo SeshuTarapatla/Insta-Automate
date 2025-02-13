@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "psycopg2>=2.9.10",
     "rich>=13.9.4",
     "sqlalchemy>=2.0.38",
     "uiautomator2>=3.2.8",

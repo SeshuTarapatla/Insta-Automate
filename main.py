@@ -1,4 +1,6 @@
 from app.vars import args
+import model
 
 
-print(args)
+if args.setup:
+    model.setup()
