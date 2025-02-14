@@ -27,7 +27,7 @@ class Scrcpy:
         with Status(f"Starting scrcpy session for {self.serial}"):
             self.process = Popen(f"scrcpy -s {self.serial} -S", stdout=DEVNULL, stderr=DEVNULL)
             sleep(self.delay)
-        log.info("Scrcpy session started")
+        log.info("Scrcpy session started\n")
     
     def stop(self) -> None:
         """Stop android mirroring"""

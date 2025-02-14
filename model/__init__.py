@@ -1,9 +1,9 @@
-from model.base import Base, engine
 from model.audit import Audit
+from model.base import Base, engine
 from model.profiles import Profile
 from utils.logger import log
 
-
+# list of all tables under ORM.
 tables: list[type[Base]] = [Audit, Profile]
 
 
