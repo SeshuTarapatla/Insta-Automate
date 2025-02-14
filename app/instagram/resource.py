@@ -15,12 +15,15 @@ def id(resourceId: str) -> str:
 
 class resourceIds:
     """Instagram UI resourceIds."""
-    PROFILE_TITLE = id("action_bar_title")
     HOME_TAB = id("feed_tab")
     INBOX_TAB = id("action_bar_inbox_button")
     INBOX_USER_CONTAINER = id("row_inbox_container")
     INBOX_USERNAME = id("row_inbox_username")
     MESSAGE_CONTAINER = id("message_placeholder_container")
+    POST_LIKE_COUNT = id("row_feed_like_count")
+    PROFILE_POSTS_TITLE = id("row_profile_header_textview_post_title")
+    PROFILE_TITLE = id("action_bar_title")
+    REEL_LIKE_BUTTON = id("like_button")
 
 
 class classNames:

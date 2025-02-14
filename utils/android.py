@@ -40,6 +40,16 @@ class Android(Device):
         for element in root:
             elements.append(element)
         return elements
+
+    def get_siblings(self, resourceId: str) -> list[UiObject]:
+        """Get list of UiObjects silibings to a given resourceId"""
+        kwargs = self.__kwargs__(resourceId)
+        root = self(**kwargs)
+        root.wait(timeout=5)
+        siblings = []
+        for element in root.sibling():
+            siblings.append(element)
+        return siblings
     
     def swipe_list(self, resourceId: str, filterId: str = "", duration: float = 1) -> None:
         """Scrolls over a list of elements of given resourceId.

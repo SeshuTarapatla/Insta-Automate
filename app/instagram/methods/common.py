@@ -21,7 +21,7 @@ def resume() -> None:
         backup_account.click()
         last_message = device.get_elements(resourceIds.MESSAGE_CONTAINER)[-1]
         last_message.click()
-        ...
+        
 
 def restart() -> None:
     """Restarts Instagram app."""
