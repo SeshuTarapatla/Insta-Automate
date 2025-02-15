@@ -12,7 +12,7 @@ def resume() -> None:
         home_tab = device(resourceIds.HOME_TAB)
         home_tab.click() if home_tab.exists() else restart()
         device(resourceIds.INBOX_TAB).click()
-        device(resourceIds.INBOX_USER_CONTAINER).wait()
+        device.wait(resourceIds.INBOX_USER_CONTAINER)
         backup_account = device(text=BACKUP_ACCOUNT)
         started_at = datetime.now()
         while not backup_account.exists():
@@ -27,4 +27,4 @@ def restart() -> None:
     """Restarts Instagram app."""
     device.app_stop(PACKAGE)
     device.app_start(PACKAGE)
-    device(resourceIds.HOME_TAB).wait(timeout=10)
+    device.wait(resourceIds.HOME_TAB)

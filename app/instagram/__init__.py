@@ -2,6 +2,7 @@ from datetime import datetime
 
 from app.instagram.methods.chat import Chat
 from app.instagram.methods.common import resume
+from app.instagram.methods.followers import Followers
 from app.instagram.methods.likes import Likes
 from app.instagram.resource import resourceIds
 from app.vars import args
@@ -11,7 +12,7 @@ from utils.misc import time_limit
 
 
 def scrape() -> None:
-    log.info("Insta Automate: [yellow]SCRAPE[/]")
+    log.info("Insta Automate: [green]SCRAPE[/]")
     if args.resume:
         resume()
     started_at = datetime.now()
@@ -30,7 +31,7 @@ def scrape() -> None:
         time_limit(started_at)
     match selector[0]:
         case resourceIds.PROFILE_POSTS_TITLE:
-            method = Chat()
+            method = Followers()
         case resourceIds.POST_LIKE_COUNT:
             method = Likes("post")
         case resourceIds.REEL_LIKE_BUTTON:

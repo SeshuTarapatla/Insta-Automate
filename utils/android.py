@@ -12,7 +12,7 @@ class Android(Device):
         serial = Android.get_default_serial(serial)
         with console.status(f"Connecting to {serial}"):
             super().__init__(serial)
-            log.info(f"Device connected: [bold cyan]{self.info.get("productName", serial)}[/]")
+            log.info(f"Device connected: [cyan]{self.info.get("productName", serial)}[/]")
     
     def __call__(self, resourceId: str = "", text: str = "", description: str = "", className: str = "", **kwargs) -> UiObject:
         """Call for UiObjects."""
@@ -71,9 +71,24 @@ class Android(Device):
         else:
             log.warning("No elements left to scroll")
     
+    def get_text(self, resourceId: str, default: str = "") -> str:
+        """Function that return text of an element if exists, else returns default value."""
+        kwargs = self.__kwargs__(resourceId)
+        element = self(**kwargs)
+        if element.exists():
+            return element.get_text()
+        return default
+    
     def print_hierarchy(self) -> None:
         """Prints output of dump_hierarchy method."""
         print(self.dump_hierarchy())
+    
+    def wait(self, resourceId: str, timeout: int = 10) -> None:
+        """Wait for an element to appear on screen. If not found in given time, raises an exception."""
+        kwargs = self.__kwargs__(resourceId)
+        status = self(**kwargs).wait(timeout=timeout)
+        if not status:
+            raise Exception(f"Element with resourceId: {resourceId} not found. [Time limit exceeded]")
 
     @staticmethod
     def get_devices() -> list[str]:

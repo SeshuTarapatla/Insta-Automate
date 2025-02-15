@@ -9,7 +9,7 @@ tables: list[type[Base]] = [Audit, Profile]
 
 def setup() -> None:
     """Function to setup postgres schema and tables."""
-    log.info("Insta Automate: [yellow]DB SETUP[/]")
+    log.info("Insta Automate: [green]DB SETUP[/]")
     log.info("Initializing Postgres setup")
     if not Base.setup():
         return

@@ -31,13 +31,13 @@ class Scrcpy:
     
     def stop(self) -> None:
         """Stop android mirroring"""
-        if self.process:
-            self.__del__()
-            log.info("Scrcpy session ended")
+        self.__del__()
+        log.info("Scrcpy session ended")
     
     def __del__(self) -> None:
         """Garbage collect the object."""
-        self.process.kill()
+        if self.process is not None:
+            self.process.kill()
     
     @staticmethod
     def check_installation() -> None:

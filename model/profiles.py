@@ -31,4 +31,4 @@ class Profile(Base):
     private         : Mapped[bool]      = mapped_column(Boolean)
     verified        : Mapped[bool]      = mapped_column(Boolean)
     relation        : Mapped[Relation]  = mapped_column(Enum(Relation, schema=schema))
-    timestamp       : Mapped[DateTime]  = mapped_column(DateTime, default=datetime.now)
+    timestamp       : Mapped[datetime]  = mapped_column(DateTime, default=datetime.now)
