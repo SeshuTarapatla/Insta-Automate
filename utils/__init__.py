@@ -14,3 +14,4 @@ if args.setup:
 else:
     device = Android(SERIAL)
     scrcpy = Scrcpy(SERIAL)
+    

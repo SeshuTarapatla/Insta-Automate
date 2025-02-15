@@ -1,6 +1,8 @@
 from datetime import datetime
 
+from app.instagram.methods.chat import Chat
 from app.instagram.methods.common import resume
+from app.instagram.methods.likes import Likes
 from app.instagram.resource import resourceIds
 from app.vars import args
 from utils import device
@@ -28,12 +30,13 @@ def scrape() -> None:
         time_limit(started_at)
     match selector[0]:
         case resourceIds.PROFILE_POSTS_TITLE:
-            log.info("Profile followers")
+            method = Chat()
         case resourceIds.POST_LIKE_COUNT:
-            log.info("Post likes")
+            method = Likes("post")
         case resourceIds.REEL_LIKE_BUTTON:
-            log.info("Reel likes")
+            method = Likes("reel")
         case resourceIds.MESSAGE_CONTAINER:
-            log.info("Chat saved")
+            method = Chat()
         case _:
             raise AttributeError("Invalid selector.")
+    method.start()

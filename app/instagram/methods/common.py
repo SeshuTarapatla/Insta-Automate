@@ -27,6 +27,4 @@ def restart() -> None:
     """Restarts Instagram app."""
     device.app_stop(PACKAGE)
     device.app_start(PACKAGE)
-    while True:
-        if device(resourceIds.HOME_TAB).exists(10):
-            break
+    device(resourceIds.HOME_TAB).wait(timeout=10)

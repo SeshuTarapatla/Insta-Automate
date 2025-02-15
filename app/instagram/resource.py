@@ -19,6 +19,7 @@ class resourceIds:
     INBOX_TAB = id("action_bar_inbox_button")
     INBOX_USER_CONTAINER = id("row_inbox_container")
     INBOX_USERNAME = id("row_inbox_username")
+    LIKE_USER_CONTAINER = id("row_user_container_base")
     MESSAGE_CONTAINER = id("message_placeholder_container")
     POST_LIKE_COUNT = id("row_feed_like_count")
     PROFILE_POSTS_TITLE = id("row_profile_header_textview_post_title")
