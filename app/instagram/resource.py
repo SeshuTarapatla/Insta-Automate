@@ -1,4 +1,4 @@
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 
 
 # Instagram runtime variables
@@ -6,6 +6,7 @@ PACKAGE         : str = "cc.honista.app"
 BACKUP_ACCOUNT  : str = "lonewolf_cy"
 PICTURES_FOLDER : PurePosixPath = PurePosixPath("/storage/emulated/0/Download/Honista/Honista_Photos")
 VIDEOS_FOLDER   : PurePosixPath = PurePosixPath("/storage/emulated/0/Download/Honista/Honista_Videos")
+SAVE_FOLDER     : Path = Path(r"C:\Users\seshu\Pictures\Insta")
 
 
 def id(resourceId: str) -> str:
@@ -35,8 +36,9 @@ class resourceIds:
     PROFILE_TITLE = id("action_bar_title")
     PROFILE_VERIFIED = id("action_bar_title_verified_badge")
     REEL_LIKE_BUTTON = id("like_button")
+    SHARE_USERNAME = id("row_user_primary_name")
 
 
 class classNames:
     """Instagram UI classnames."""
-    ...
+    IMAGE_BUTTON = "android.widget.ImageButton"

@@ -5,7 +5,10 @@ from utils.logger import log
 
 class Likes(Base):
     def __init__(self, type: Literal["reel", "post"]) -> None:
-        log.info(f"Method: [italic red]{type.capitalize()} Likes[/]")
+        log.info(f"Method: [italic red]{type.capitalize()} Likes[/]\n")
+    
+    def download_media(self) -> None:
+        ...
     
     def audit(self) -> None:
         ...
