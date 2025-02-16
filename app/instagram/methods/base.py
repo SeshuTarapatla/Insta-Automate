@@ -1,4 +1,14 @@
 from abc import ABC, abstractmethod
+from pathlib import Path
+from typing import cast
+
+from ordered_set import OrderedSet
+
+from app.instagram.objects.audit import Audit
+from app.instagram.objects.common import progress_bar
+from app.instagram.objects.profile import Profile
+from utils import device
+from utils.logger import log
 
 
 class Base(ABC):
@@ -20,34 +30,59 @@ class Base(ABC):
 
 
     @abstractmethod
-    def audit(self) -> None:
+    def audit_run(self) -> None:
+        self.audit = cast(Audit, None)
         """Audits the current run."""
         
     @abstractmethod
     def start(self) -> None:
+        self.save_dir = Path(".")
         """Sets the UI up before starting scrape."""
     
-
-'''
-FLOW:
-    1. Backup:
-        - Condition: Skip if resume
-            Profile: Share to BACKUP_ACCOUNT
-            Post: Share to BACKUP_ACCOUNT
-            Reel: Share to BACKUP_ACCOUNT
-            Chat: No backup required
-    2. Audit:
-        - Requires: root, list
-            Profile: root: TITLE, list: -r with previous audit, -f [1 or 2], default min of f1 or f2
-                > Read title, Decide ScanList
-            Post: root: Post-INDEX-HASH, list: LIKES
-                > Download post, calculate hash, fetch current index
-            Reel: root: Reel-INDEX-HASH, list: LIKES
-                > Download post, calculate hash, fetch current index
-            Chat: root: Chat, list: SAVED
-    3. Start:
-        - Steps: 1. Create save folder, 2. Put current report, 3. Start scrape
-        1. Save dir: INSTA_SAVE_DIR/ROOT/LIST
-            Profile:
-                - INSTA_SAVE_DIR/PROFILE/LIST
-'''
+    def scrape(self, root: str, total: int, container: str, title: str) -> None:
+        pbar = progress_bar()
+        task_id = pbar.add_task(f"0/{total}", total=total, user=root)
+        task = pbar.tasks[task_id]
+        scanned = OrderedSet([])
+        last_uid = None
+        pbar.start()
+        while True:
+            try:
+                uid = None
+                batch = list(OrderedSet(map(lambda x: x.get_text(), device.get_elements(title))))
+                if batch[-1] == last_uid:
+                    print()
+                    pbar.stop()
+                    break
+                batch = list(OrderedSet(batch) - scanned)
+                for uid in batch:
+                    scanned.add(uid)
+                    pbar.update(task_id, user=uid)
+                    if Profile.exists(uid):
+                        profile = Profile.get(uid)
+                    else:
+                        device(text=uid).click()
+                        profile = Profile(root)
+                        if profile.private:
+                            profile.generate_report(self.save_dir)
+                        profile.insert()
+                        device.press("back")
+                        self.audit.update_count()
+                    log.info(profile.log_repr)
+                    pbar.update(task_id, advance=1, description=f"{task.completed+1}/{task.total}")
+                if device(text="Suggested for you").exists():
+                    print()
+                    pbar.stop()
+                    break
+                last_uid = batch[-1]
+                device.swipe_list(container, title)
+            except KeyboardInterrupt:
+                pbar.stop()
+                log.error("Keyboard Interrupt")
+                exit(0)
+            except Exception as exception:
+                pbar.stop()
+                raise RuntimeError(f"UI Error: {exception}")
+        review = len(list(self.save_dir.glob("*.jpg")))
+        log.info(f"Scan complete. Total profiles scraped: [green]{task.completed}[/]. Profiles to review: [yellow]{review}[/]")
+        

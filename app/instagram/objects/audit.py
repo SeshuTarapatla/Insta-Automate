@@ -1,7 +1,9 @@
 from datetime import datetime
 from json import dumps
+
 from app.instagram.objects.common import Format
-from model.audit import Audit as AuditModel, Scanned
+from model.audit import Audit as AuditModel
+from model.audit import Scanned
 from model.base import session
 
 
@@ -24,10 +26,17 @@ class Audit(AuditModel):
         return dumps(data, indent=2, ensure_ascii=False)
     
     def insert(self) -> None:
+        """Insert current record."""
         session.add(self)
+        session.commit()
+    
+    def update_count(self, increment: int = 1) -> None:
+        """Increase count of current audit."""
+        self.count += increment
         session.commit()
 
     @staticmethod
     def get_previous(root: str) -> "Audit | None":
+        """Get previous audit for given root if exists."""
         return session.query(Audit).where(Audit.root == root).order_by(Audit.timestamp.desc()).limit(1).one_or_none()
     

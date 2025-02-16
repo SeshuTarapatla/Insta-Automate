@@ -77,7 +77,7 @@ class Android(Device):
         """Function that return text of an element if exists, else returns default value."""
         kwargs = self.__kwargs__(resourceId)
         element = self(**kwargs)
-        if element.exists():
+        if element.exists:
             return element.get_text()
         return default
     

@@ -3,16 +3,14 @@ from io import BytesIO
 from json import dumps
 from pathlib import Path
 from shutil import move
-from time import sleep
 from typing import Literal, overload
 
 from PIL import Image
 from send2trash import send2trash
-from sqlalchemy import over
 
 from app.instagram.methods.common import download_media
 from app.instagram.objects.common import Format
-from app.instagram.resource import classNames, resourceIds
+from app.instagram.resource import resourceIds
 from model.base import session
 from model.profiles import Profile as ProfileModel
 from model.profiles import Relation
@@ -32,6 +30,7 @@ class Profile(ProfileModel):
     
     def generate(self, root: str | None) -> None:
         """Generates profile object from current device state."""
+        device(resourceIds.PROFILE_POSTS_TITLE).wait()
         self.name = device.get_text(resourceIds.PROFILE_NAME)
         self.bio = device.get_text(resourceIds.PROFILE_BIO).replace("\n", ", ")
         self.posts_str = device(resourceIds.PROFILE_POSTS).get_text()
@@ -41,7 +40,7 @@ class Profile(ProfileModel):
         self.followers = Format.str_to_int(self.followers_str)
         self.following = Format.str_to_int(self.following_str)
         self.root = root if root else self.id
-        self.private = device(resourceIds.PROFILE_POSTS_TAB).exists()
+        self.private = not device(resourceIds.PROFILE_POSTS_TAB).exists()
         self.verified = device(resourceIds.PROFILE_VERIFIED).exists()
         if device(text="Edit profile").exists():
             self.relation = Relation.FOLLOWING
@@ -66,11 +65,10 @@ class Profile(ProfileModel):
 
     def insert(self) -> None:
         """Inserts profile object into database if not exists."""
-        if not self.exists:
+        if not self.exists():
             session.add(self)
             session.commit()
     
-    @property
     def exists(self: "str | Profile") -> bool:
         """Checks if profile object exists in database."""
         id = self.id if isinstance(self, Profile) else self
@@ -92,6 +90,10 @@ class Profile(ProfileModel):
         """Returns title of current profile."""
         return device(resourceIds.PROFILE_TITLE).get_text()
     
+    @staticmethod
+    def get(id: str) -> "Profile":
+        return session.query(Profile).where(Profile.id == id).one()
+        
     @overload
     def download_dp(self, return_type: Literal["path"] = "path", save_to: Path = Path(".")) -> Path: ...
     
@@ -100,7 +102,8 @@ class Profile(ProfileModel):
 
     def download_dp(self, return_type: Literal["path", "bytes"] = "path", save_to: Path = Path(".")) -> Path | bytes:
         started_at = datetime.now()
-        device(resourceIds.PROFILE_PICTURE).long_click()
+        dp_icon = device.get_siblings(resourceIds.PROFILE_HEADER)[4]
+        dp_icon.click()
         device(text="SAVE PHOTO").click()
         src = download_media(started_at)
         dst = save_to / f"{self.id}.jpg"
@@ -125,3 +128,11 @@ class Profile(ProfileModel):
         report.save(dst)
         return dst
     
+    @staticmethod
+    def get_or_create(id: str | None = None) -> "Profile":
+        if id is None:
+            id = Profile.get_title()
+        if Profile.exists(id):
+            return Profile.get(id)
+        else:
+            return Profile()

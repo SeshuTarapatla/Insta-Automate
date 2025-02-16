@@ -7,10 +7,10 @@ from enum import Enum as EnumBase
 
 class Scanned(EnumBase):
     """Enum for scanned list."""
-    FOLLOWERS   = "Followers"
-    FOLLOWING   = "Following"
-    LIKES       = "Likes"
-    SAVED       = "Saved"
+    FOLLOWERS   = "followers"
+    FOLLOWING   = "following"
+    LIKES       = "likes"
+    SAVED       = "saved"
 
 
 class Audit(Base):

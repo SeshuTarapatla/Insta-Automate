@@ -1,5 +1,4 @@
 from datetime import datetime
-from time import sleep
 
 from app.instagram.methods.chat import Chat
 from app.instagram.methods.common import resume
@@ -16,18 +15,13 @@ def scrape() -> None:
     log.info("Insta Automate: [green]SCRAPE[/]")
     if args.resume:
         resume()
-    # hint area to check if post is actually a reel.
-    post_hint = device(resourceIds.POST_HINT_AREA)
-    if post_hint.exists():
-        post_hint.click()
-        sleep(0.5)
     started_at = datetime.now()
     while True:
         selectors: list[str] = [
             resourceIds.PROFILE_POSTS_TITLE,
-            resourceIds.POST_LIKE_COUNT,
+            resourceIds.POST_LIKE_BUTTON,
             resourceIds.REEL_LIKE_BUTTON,
-            resourceIds.MESSAGE_CONTAINER
+            resourceIds.MESSAGE_CONTAINER,
         ]
         selector = list(filter(lambda selector: device(selector).exists(), selectors))
         if len(selector) == 1:
@@ -38,7 +32,7 @@ def scrape() -> None:
     match selector[0]:
         case resourceIds.PROFILE_POSTS_TITLE:
             method = Followers()
-        case resourceIds.POST_LIKE_COUNT:
+        case resourceIds.POST_LIKE_BUTTON:
             method = Likes("post")
         case resourceIds.REEL_LIKE_BUTTON:
             method = Likes("reel")

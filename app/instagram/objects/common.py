@@ -1,5 +1,15 @@
 from datetime import datetime
-from PIL import Image
+
+from rich.progress import (
+    BarColumn,
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+)
+
+from utils.logger import console
 
 
 class Format:
@@ -31,5 +41,19 @@ class Format:
         """Converts datetime object to instagram human readable date."""
         return dt.strftime("%Y-%m-%d %H:%M:%S")
 
-def app_screenshot() -> Image.Image:
-    ...
+def progress_bar() -> Progress:
+    """Creates a progress bar for scanning.
+
+    Returns:
+        Progress: rich progress object.
+    """
+    return Progress(
+        SpinnerColumn(),
+        TextColumn("[green bold]Scanning[/] [{task.description}]"),
+        BarColumn(),
+        TextColumn("{task.percentage:.0f}%"),
+        TimeElapsedColumn(),
+        TimeRemainingColumn(),
+        TextColumn("[bold italic royal_blue1]@{task.fields[user]}"),
+        console=console
+    )
