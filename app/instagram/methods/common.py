@@ -28,3 +28,13 @@ def restart() -> None:
     device.app_stop(PACKAGE)
     device.app_start(PACKAGE)
     device.wait(resourceIds.HOME_TAB)
+
+def backup() -> None:
+    """Backs up current scrape entity to Backup account. Entrypoint should be share menu."""
+    device(text="Search").click()
+    device.send_keys(BACKUP_ACCOUNT)
+    backup_account = device(resourceIds.SHARE_USERNAME, text=BACKUP_ACCOUNT)
+    if not backup_account.wait(timeout=5):
+        raise RuntimeError("Backup account not found.")
+    backup_account.click()
+    device(text="Send").click()

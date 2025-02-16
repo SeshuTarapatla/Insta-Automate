@@ -23,6 +23,7 @@ class resourceIds:
     LIKE_USER_CONTAINER = id("row_user_container_base")
     MESSAGE_CONTAINER = id("message_placeholder_container")
     POST_LIKE_COUNT = id("row_feed_like_count")
+    POST_SHARE_BUTTON = id("row_feed_button_share")
     PROFILE_BIO = id("profile_header_bio_text")
     PROFILE_FOLLOWERS = id("row_profile_header_textview_followers_count")
     PROFILE_FOLLOWING = id("row_profile_header_textview_following_count")

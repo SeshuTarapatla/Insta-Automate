@@ -1,6 +1,5 @@
 from adbutils import adb
 from uiautomator2 import Device, UiObject
-from PIL import Image
 
 from utils.logger import console, log
 
