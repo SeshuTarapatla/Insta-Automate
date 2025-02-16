@@ -20,4 +20,4 @@ class Audit(Base):
     root        : Mapped[str]       = mapped_column(String(128))
     list        : Mapped[Scanned]   = mapped_column(Enum(Scanned, schema=schema))
     count       : Mapped[int]       = mapped_column(Integer, default=0)
-    timestamp   : Mapped[DateTime]  = mapped_column(DateTime, default=datetime.now)
+    timestamp   : Mapped[datetime]  = mapped_column(DateTime, default=datetime.now)

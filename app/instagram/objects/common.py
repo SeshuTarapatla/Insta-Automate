@@ -1,8 +1,5 @@
-from datetime import datetime, timedelta
-from pathlib import Path, PurePosixPath
-
-from app.instagram.resource import PICTURES_FOLDER, VIDEOS_FOLDER
-from utils import device
+from datetime import datetime
+from PIL import Image
 
 
 class Format:
@@ -34,22 +31,5 @@ class Format:
         """Converts datetime object to instagram human readable date."""
         return dt.strftime("%Y-%m-%d %H:%M:%S")
 
-
-def download_last_media(dt: datetime, buffer: float = 5, wait: float = 15) -> Path:
-    """Downloads the last instagram media doownloaded based on given dt. Adjust buffer for time sync issue."""
-    dt -= timedelta(seconds=buffer)
-    dt_str = Format.dt_to_str(dt)
-    started_at = datetime.now()
-    while True:
-        pictures = device.shell(f"find '{PICTURES_FOLDER.as_posix()}' -name '*.jpg' -type f -newermt '{dt_str}'").output.splitlines()
-        videos = device.shell(f"find '{VIDEOS_FOLDER.as_posix()}' -name '*.mp4' -type f -newermt '{dt_str}'").output.splitlines()
-        files = pictures + videos
-        if files:
-            break
-        elif (datetime.now() - started_at).seconds > wait:
-            raise TimeoutError(f"Media download timeout: {dt_str}")
-    if len(files) > 1:
-        raise FileExistsError(f"Multiple media exists exceeding given dt: {dt_str}")
-    file = PurePosixPath(files[0])
-    device.pull(file.as_posix(), file.name)
-    return Path(file.name)
+def app_screenshot() -> Image.Image:
+    ...

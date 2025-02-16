@@ -1,10 +1,17 @@
 from datetime import datetime
+from io import BytesIO
 from json import dumps
 from pathlib import Path
 from shutil import move
 from time import sleep
+from typing import Literal, overload
 
-from app.instagram.objects.common import Format, download_last_media
+from PIL import Image
+from send2trash import send2trash
+from sqlalchemy import over
+
+from app.instagram.methods.common import download_media
+from app.instagram.objects.common import Format
 from app.instagram.resource import classNames, resourceIds
 from model.base import session
 from model.profiles import Profile as ProfileModel
@@ -42,6 +49,7 @@ class Profile(ProfileModel):
             self.relation = Relation.RESTRICTED
         elif device(resourceIds.PROFILE_RELATION).exists():
             self.relation = Relation(device(resourceIds.PROFILE_RELATION).get_text())
+        self.timestamp = datetime.now()
     
     def __str__(self) -> str:
         """Short representation of profile object."""
@@ -83,17 +91,37 @@ class Profile(ProfileModel):
     def get_title() -> str:
         """Returns title of current profile."""
         return device(resourceIds.PROFILE_TITLE).get_text()
+    
+    @overload
+    def download_dp(self, return_type: Literal["path"] = "path", save_to: Path = Path(".")) -> Path: ...
+    
+    @overload
+    def download_dp(self, return_type: Literal["bytes"], save_to: Path = Path(".")) -> bytes: ...
 
-    def download_dp(self: "str | Profile", save_to: Path = Path(".")) -> Path:
+    def download_dp(self, return_type: Literal["path", "bytes"] = "path", save_to: Path = Path(".")) -> Path | bytes:
         started_at = datetime.now()
-        id = self.id if isinstance(self, Profile) else self
-        device(className=classNames.IMAGE_BUTTON).click()
-        sleep(0.5)
-        device(text="Show Profile Picture Larger").click()
-        device(text="DOWNLOAD PROFILE PHOTO").click()
-        src = download_last_media(started_at)
-        dst = save_to / f"{id}.jpg"
+        device(resourceIds.PROFILE_PICTURE).long_click()
+        device(text="SAVE PHOTO").click()
+        src = download_media(started_at)
+        dst = save_to / f"{self.id}.jpg"
         move(src, dst)
+        if return_type == "bytes":
+            data = dst.read_bytes()
+            send2trash(dst)
+            return data
         return dst
     
+    def generate_report(self, save_to: Path = Path(".")) -> Path:
+        dst = save_to/(self.id+".jpg")
+        if dst.exists():
+            return dst
+        profile_page = device(resourceIds.APP_FULLSCREEN).screenshot()
+        dp = self.download_dp(return_type="bytes")
+        profile_pic = Image.open(BytesIO(dp))
+        profile_pic = profile_pic.resize((profile_page.height, profile_page.height))
+        report = Image.new("RGB", (profile_pic.width + profile_page.width, profile_page.height))
+        report.paste(profile_pic, (0, 0))
+        report.paste(profile_page, (profile_pic.width, 0))
+        report.save(dst)
+        return dst
     

@@ -10,11 +10,13 @@ class Chat(Base):
         "No backup required for Chat method."
     
     def download_media(self) -> None:
-        ...
+        "No media download required for Chat method"
     
     def audit(self) -> None:
         ...
     
     def start(self) -> None:
-        ...
+        self.backup()
+        self.download_media()
+        
     

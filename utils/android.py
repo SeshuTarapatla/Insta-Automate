@@ -1,5 +1,7 @@
+from pathlib import PurePosixPath
 from adbutils import adb
 from uiautomator2 import Device, UiObject
+from zmq import device
 
 from utils.logger import console, log
 
@@ -89,6 +91,11 @@ class Android(Device):
         status = self(**kwargs).wait(timeout=timeout)
         if not status:
             raise Exception(f"Element with resourceId: {resourceId} not found. [Time limit exceeded]")
+    
+    def get_size(self, file: PurePosixPath | str) -> int:
+        """Get size of a given file in bytes."""
+        file = file.as_posix() if isinstance(file, PurePosixPath) else file
+        return int(self.shell(f"stat -c %s {file}").output.splitlines()[0])
 
     @staticmethod
     def get_devices() -> list[str]:
