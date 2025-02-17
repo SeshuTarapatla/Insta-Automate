@@ -1,7 +1,6 @@
 from pathlib import PurePosixPath
 from adbutils import adb
 from uiautomator2 import Device, UiObject
-from zmq import device
 
 from utils.logger import console, log
 
@@ -53,21 +52,20 @@ class Android(Device):
             siblings.append(element)
         return siblings
     
-    def swipe_list(self, resourceId: str, filterId: str = "", duration: float = 1) -> None:
+    def swipe_list(self, resourceId: str, min_y: int = 100, duration: float = 1) -> None:
         """Scrolls over a list of elements of given resourceId.
 
         Args:
             resourceId (str): resourceId of list elements.
-            filterId (str, optional): child resourceId to filter out invalid list elements. Defaults to "".
+            min_y (int, optional): minimum visible pixels on y axis for last element. Defaults to 100.
             duration (float, optional): drag duration in seconds. Defaults to 1.
         """
         elements = self.get_elements(resourceId)
-        if filterId:
-            # filter out those elements which doesn't have filterId as child element.
-            elements = list(filter(lambda x: x.child(**self.__kwargs__(filterId)).exists(), elements))
         if len(elements) > 1:
+            sx, sy, ex, ey = elements[-1].bounds()
+            last = -1 if (ey - sy) >= min_y else -2
             sx, ex = [self.info["displayWidth"] // 2] * 2
-            sy = elements[-1].bounds()[1]
+            sy = elements[last].bounds()[1]
             ey = elements[0].bounds()[1]
             self.swipe(sx, sy, ex, ey, duration=duration)
         else:

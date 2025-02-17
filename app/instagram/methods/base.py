@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import cast
 
 from ordered_set import OrderedSet
+from uiautomator2 import UiObjectNotFoundError
 
 from app.instagram.objects.audit import Audit
 from app.instagram.objects.common import progress_bar
@@ -44,25 +45,34 @@ class Base(ABC):
         task_id = pbar.add_task(f"0/{total}", total=total, user=root)
         task = pbar.tasks[task_id]
         scanned = OrderedSet([])
+        uid = None
         last_uid = None
         pbar.start()
         while True:
             try:
-                uid = None
-                batch = list(OrderedSet(map(lambda x: x.get_text(), device.get_elements(title))))
-                if batch[-1] == last_uid:
+                titles = list(map(lambda x: x.get_text(), device.get_elements(title)))
+                if titles and (titles[:-1] == [last_uid]):
                     print()
                     pbar.stop()
                     break
-                batch = list(OrderedSet(batch) - scanned)
+                batch = OrderedSet(titles) - scanned
                 for uid in batch:
                     scanned.add(uid)
                     pbar.update(task_id, user=uid)
                     if Profile.exists(uid):
                         profile = Profile.get(uid)
                     else:
-                        device(text=uid).click()
-                        profile = Profile(root)
+                        uid_object = device(text=uid)
+                        uid_object.click()
+                        while True:
+                            try:
+                                profile = Profile(root)
+                                break
+                            except UiObjectNotFoundError:
+                                if uid_object.exists() and device(container).exists():
+                                    uid_object.click()
+                                else:
+                                    raise UiObjectNotFoundError
                         if profile.private:
                             profile.generate_report(self.save_dir)
                         profile.insert()
@@ -74,15 +84,12 @@ class Base(ABC):
                     print()
                     pbar.stop()
                     break
-                last_uid = batch[-1]
-                device.swipe_list(container, title)
+                last_uid = uid
+                device.swipe_list(container)
             except KeyboardInterrupt:
                 pbar.stop()
                 log.error("Keyboard Interrupt")
                 exit(0)
-            except Exception as exception:
-                pbar.stop()
-                raise RuntimeError(f"UI Error: {exception}")
         review = len(list(self.save_dir.glob("*.jpg")))
         log.info(f"Scan complete. Total profiles scraped: [green]{task.completed}[/]. Profiles to review: [yellow]{review}[/]")
         

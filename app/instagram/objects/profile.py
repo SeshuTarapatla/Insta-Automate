@@ -30,7 +30,7 @@ class Profile(ProfileModel):
     
     def generate(self, root: str | None) -> None:
         """Generates profile object from current device state."""
-        device(resourceIds.PROFILE_POSTS_TITLE).wait()
+        device(resourceIds.PROFILE_POSTS).wait(timeout=5)
         self.name = device.get_text(resourceIds.PROFILE_NAME)
         self.bio = device.get_text(resourceIds.PROFILE_BIO).replace("\n", ", ")
         self.posts_str = device(resourceIds.PROFILE_POSTS).get_text()

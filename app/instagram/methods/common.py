@@ -30,12 +30,13 @@ def resume() -> None:
         backup_account = device(text=BACKUP_ACCOUNT)
         started_at = datetime.now()
         while not backup_account.exists():
-            device.swipe_list(resourceIds.INBOX_USER_CONTAINER, resourceIds.INBOX_USERNAME)
-            time_limit(started_at)
+            device.swipe_list(resourceIds.INBOX_USER_CONTAINER)
+            time_limit(started_at, limit=60)
         backup_account.click()
         last_message = device.get_elements(resourceIds.MESSAGE_CONTAINER)[-1]
         last_message.click()
         sleep(1)
+        device(text="Loading").wait_gone()
 
 def restart() -> None:
     """Restarts Instagram app."""
