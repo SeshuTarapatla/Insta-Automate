@@ -8,6 +8,7 @@ from uiautomator2 import UiObjectNotFoundError
 from app.instagram.objects.audit import Audit
 from app.instagram.objects.common import progress_bar
 from app.instagram.objects.profile import Profile
+from model.profiles import Relation
 from utils import device
 from utils.logger import log
 
@@ -44,14 +45,15 @@ class Base(ABC):
         pbar = progress_bar()
         task_id = pbar.add_task(f"0/{total}", total=total, user=root)
         task = pbar.tasks[task_id]
-        scanned = OrderedSet([])
+        scanned = OrderedSet([None])
         uid = None
         last_uid = None
         pbar.start()
         while True:
             try:
                 titles = list(map(lambda x: x.get_text(), device.get_elements(title)))
-                if titles and (titles[:-1] == [last_uid]):
+                # if titles and (titles[:-1] == [last_uid]):
+                if titles and (titles[-1:] == scanned[-1:]) and self.__class__.__name__ == "Likes":
                     print()
                     pbar.stop()
                     break
@@ -73,7 +75,7 @@ class Base(ABC):
                                     uid_object.click()
                                 else:
                                     raise UiObjectNotFoundError
-                        if profile.private:
+                        if profile.private and profile.relation ==  Relation.FOLLOW:
                             profile.generate_report(self.save_dir)
                         profile.insert()
                         device.press("back")

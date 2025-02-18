@@ -1,4 +1,5 @@
 from pathlib import PurePosixPath
+from typing import Literal
 from adbutils import adb
 from uiautomator2 import Device, UiObject
 
@@ -52,13 +53,17 @@ class Android(Device):
             siblings.append(element)
         return siblings
     
-    def swipe_list(self, resourceId: str, min_y: int = 100, duration: float = 1) -> None:
+    def swipe_list(self, resourceId: str, min_y: int = 100, duration: float = 1, direction: Literal["up", "down"] = "up") -> None:
         """Scrolls over a list of elements of given resourceId.
 
         Args:
             resourceId (str): resourceId of list elements.
             min_y (int, optional): minimum visible pixels on y axis for last element. Defaults to 100.
             duration (float, optional): drag duration in seconds. Defaults to 1.
+            direction (Literal[&quot;up&quot;, &quot;down&quot;], optional): Scroll direction. Defaults to "up".
+
+        Raises:
+            RuntimeError: If no scroll elements present.
         """
         elements = self.get_elements(resourceId)
         if len(elements) > 1:
@@ -67,9 +72,12 @@ class Android(Device):
             sx, ex = [self.info["displayWidth"] // 2] * 2
             sy = elements[last].bounds()[1]
             ey = elements[0].bounds()[1]
+            if direction == "down":
+                sy,ey = ey,sy
             self.swipe(sx, sy, ex, ey, duration=duration)
         else:
-            log.warning("No elements left to scroll")
+            log.error("No elements left to scroll")
+            raise RuntimeError
     
     def get_text(self, resourceId: str, default: str = "") -> str:
         """Function that return text of an element if exists, else returns default value."""
