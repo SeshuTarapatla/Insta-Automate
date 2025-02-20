@@ -60,7 +60,7 @@ def backup() -> None:
     device(text="Send").click()
     backup_account.wait_gone()
 
-def download_media(dt: datetime, buffer: float = 5, wait: float = 15) -> Path:
+def download_media(dt: datetime, buffer: float = 5, wait: float = 30) -> Path:
     """Pulls the last instagram media downloaded based on given dt. Adjust buffer for time sync issue."""
     dt -= timedelta(seconds=buffer)
     dt_str = Format.dt_to_str(dt)
@@ -81,7 +81,7 @@ def download_media(dt: datetime, buffer: float = 5, wait: float = 15) -> Path:
     size = device.get_size(file)
     # Wait for media to fully download
     while True:
-        sleep(0.3)
+        sleep(0.5)
         current_size = device.get_size(file)
         if current_size == size:
             break

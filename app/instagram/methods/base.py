@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import cast
+from winsound import Beep
 
 from ordered_set import OrderedSet
 from uiautomator2 import UiObjectNotFoundError
@@ -9,8 +10,8 @@ from app.instagram.objects.audit import Audit
 from app.instagram.objects.common import progress_bar
 from app.instagram.objects.profile import Profile
 from model.profiles import Relation
-from utils import device
-from utils.logger import log
+from utils import device, scrcpy
+from utils.logger import console, log
 
 
 class Base(ABC):
@@ -45,19 +46,25 @@ class Base(ABC):
         pbar = progress_bar()
         task_id = pbar.add_task(f"0/{total}", total=total, user=root)
         task = pbar.tasks[task_id]
-        scanned = OrderedSet([None])
-        uid = None
-        last_uid = None
+        scanned = OrderedSet([])
         pbar.start()
         while True:
             try:
-                titles = list(map(lambda x: x.get_text(), device.get_elements(title)))
-                # if titles and (titles[:-1] == [last_uid]):
+                titles = OrderedSet(map(lambda x: x.get_text(), device.get_elements(title)))
                 if titles and (titles[-1:] == scanned[-1:]) and self.__class__.__name__ == "Likes":
                     print()
                     pbar.stop()
                     break
-                batch = OrderedSet(titles) - scanned
+                batch = titles - scanned
+                if (scanned & batch) == batch:
+                    pbar.stop()
+                    scrcpy.stop()
+                    Beep(700, 3000)
+                    log.warning("Scroll list has been reset. Please scroll to bottom manually and press enter")
+                    console.input()
+                    scrcpy.start()
+                    pbar.start()
+                    continue
                 for uid in batch:
                     scanned.add(uid)
                     pbar.update(task_id, user=uid)
@@ -74,7 +81,7 @@ class Base(ABC):
                                 if uid_object.exists() and device(container).exists():
                                     uid_object.click()
                                 else:
-                                    raise UiObjectNotFoundError
+                                    raise UiObjectNotFoundError()
                         if profile.private and profile.relation ==  Relation.FOLLOW:
                             profile.generate_report(self.save_dir)
                         profile.insert()
@@ -86,7 +93,6 @@ class Base(ABC):
                     print()
                     pbar.stop()
                     break
-                last_uid = uid
                 device.swipe_list(container)
             except KeyboardInterrupt:
                 pbar.stop()
