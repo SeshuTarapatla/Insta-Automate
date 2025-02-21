@@ -3,6 +3,8 @@ from pathlib import Path, PurePosixPath
 from time import sleep
 from typing import Literal
 
+from ordered_set import OrderedSet
+
 
 from app.instagram.objects.common import Format
 from app.instagram.resource import (
@@ -60,17 +62,19 @@ def backup() -> None:
     device(text="Send").click()
     backup_account.wait_gone()
 
-def download_media(dt: datetime, buffer: float = 5, wait: float = 30) -> Path:
+def download_media(dt: datetime, buffer: float = 10, wait: float = 30, prefix: str = "") -> Path:
     """Pulls the last instagram media downloaded based on given dt. Adjust buffer for time sync issue."""
     dt -= timedelta(seconds=buffer)
     dt_str = Format.dt_to_str(dt)
     started_at = datetime.now()
     while True:
-        jpg = device.shell(f"find '{PICTURES_FOLDER.as_posix()}' -name '*.jpg' -type f -newermt '{dt_str}'").output.splitlines()
-        heic = device.shell(f"find '{PICTURES_FOLDER.as_posix()}' -name '*.heic' -type f -newermt '{dt_str}'").output.splitlines()
-        png = device.shell(f"find '{PICTURES_FOLDER.as_posix()}' -name '*.png' -type f -newermt '{dt_str}'").output.splitlines()
-        mp4 = device.shell(f"find '{VIDEOS_FOLDER.as_posix()}' -name '*.mp4' -type f -newermt '{dt_str}'").output.splitlines()
-        files = jpg + heic + png + mp4 
+        pictures = device.shell(f"find '{PICTURES_FOLDER.as_posix()}' -name '{prefix}*' -type f").output.splitlines()
+        videos = device.shell(f"find '{VIDEOS_FOLDER.as_posix()}' -name '{prefix}*' -type f").output.splitlines()
+        files = OrderedSet(pictures + videos)
+        if len(files) > 1:
+            pictures = device.shell(f"find '{PICTURES_FOLDER.as_posix()}' -name '{prefix}*' -type f -newermt '{dt_str}'").output.splitlines()
+            videos = device.shell(f"find '{VIDEOS_FOLDER.as_posix()}' -name '{prefix}*' -type f -newermt '{dt_str}'").output.splitlines()
+            files = OrderedSet(pictures + videos)
         if files:
             break
         elif (datetime.now() - started_at).seconds > wait:

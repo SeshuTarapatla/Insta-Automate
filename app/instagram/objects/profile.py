@@ -105,7 +105,7 @@ class Profile(ProfileModel):
         dp_icon = device.get_siblings(resourceIds.PROFILE_HEADER)[4]
         dp_icon.click()
         device(text="SAVE PHOTO").click()
-        src = download_media(started_at)
+        src = download_media(started_at, prefix=self.id)
         dst = save_to / f"{self.id}.jpg"
         move(src, dst)
         if return_type == "bytes":
