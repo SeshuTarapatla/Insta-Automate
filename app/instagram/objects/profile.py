@@ -7,6 +7,7 @@ from typing import Literal, overload
 
 from PIL import Image
 from send2trash import send2trash
+from uiautomator2 import UiObjectNotFoundError
 
 from app.instagram.methods.common import download_media
 from app.instagram.objects.common import Format
@@ -30,7 +31,8 @@ class Profile(ProfileModel):
     
     def generate(self, root: str | None) -> None:
         """Generates profile object from current device state."""
-        device(resourceIds.PROFILE_POSTS).wait(timeout=5)
+        if not device(resourceIds.PROFILE_POSTS).exists(timeout=5):
+            raise UiObjectNotFoundError("Elements not found to generate a profile record.")
         self.name = device.get_text(resourceIds.PROFILE_NAME)
         self.bio = device.get_text(resourceIds.PROFILE_BIO).replace("\n", ", ")
         self.posts_str = device(resourceIds.PROFILE_POSTS).get_text()
@@ -136,3 +138,4 @@ class Profile(ProfileModel):
             return Profile.get(id)
         else:
             return Profile()
+        

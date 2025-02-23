@@ -1,14 +1,17 @@
 from abc import ABC, abstractmethod
+from os import system
 from pathlib import Path
 from typing import cast
 from winsound import Beep
 
 from ordered_set import OrderedSet
+from send2trash import send2trash
 from uiautomator2 import UiObjectNotFoundError
 
 from app.instagram.objects.audit import Audit
 from app.instagram.objects.common import progress_bar
 from app.instagram.objects.profile import Profile
+from app.instagram.resource import resourceIds
 from model.profiles import Relation
 from utils import device, scrcpy
 from utils.logger import console, log
@@ -57,7 +60,7 @@ class Base(ABC):
             print()
             pbar.stop()
 
-        ignore = ["prapti_ch", "sneha_2910"]
+        current = device(resourceIds.APP_FULLSCREEN).screenshot()
         pbar = progress_bar()
         task_id = pbar.add_task(f"0/{total}", total=total, user=root)
         task = pbar.tasks[task_id]
@@ -69,17 +72,20 @@ class Base(ABC):
                 if titles and (titles[-1:] == scanned[-1:]) and self.__class__.__name__ == "Likes":
                     end()
                     break
-                batch = titles - scanned
-                if (scanned & batch) == batch:
+                if titles and (scanned & titles) == titles and not device(text="Suggested for you").exists():
                     stop()
-                    log.warning("Scroll list has been reset. Please scroll to bottom manually and press enter")
+                    log.warning("Scroll list has been reset. Please scroll to bottom manually and press enter.")
+                    current.save("current.jpg")
+                    system("current.jpg")
+                    send2trash("current.jpg")
                     console.input()
                     resume()
                     continue
+                batch = titles - scanned
                 for uid in batch:
                     scanned.add(uid)
                     pbar.update(task_id, user=uid)
-                    if Profile.exists(uid) or uid in ignore:
+                    if Profile.exists(uid):
                         profile = Profile.get(uid)
                     else:
                         uid_object = device(text=uid)
@@ -103,6 +109,8 @@ class Base(ABC):
                 if device(text="Suggested for you").exists():
                     end()
                     break
+                if device(resourceIds.APP_FULLSCREEN).exists():
+                    current = device(resourceIds.APP_FULLSCREEN).screenshot()
                 device.swipe_list(container)
             except KeyboardInterrupt:
                 try:

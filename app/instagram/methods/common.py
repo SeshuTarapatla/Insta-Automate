@@ -48,17 +48,21 @@ def restart() -> None:
 
 def backup() -> None:
     """Backs up current scrape entity to Backup account. Entrypoint should be share menu."""
-    device(text="Search").click()
-    device.send_keys(BACKUP_ACCOUNT)
-    backup_account = device(resourceIds.SHARE_USERNAME, text=BACKUP_ACCOUNT)
-    if not backup_account.wait(timeout=5):
-        raise RuntimeError("Backup account not found.")
-    while True:
-        try:
-            backup_account.click()
-            break
-        except RPCUnknownError:
-            pass
+    backup_account = device(text=BACKUP_ACCOUNT)
+    if backup_account.exists(timeout=2):
+        backup_account.click()
+    else:
+        device(text="Search").click()
+        device.send_keys(BACKUP_ACCOUNT)
+        backup_account = device(resourceIds.SHARE_USERNAME, text=BACKUP_ACCOUNT)
+        if not backup_account.exists(timeout=5):
+            raise RuntimeError("Backup account not found.")
+        while True:
+            try:
+                backup_account.click()
+                break
+            except RPCUnknownError:
+                pass
     device(text="Send").click()
     backup_account.wait_gone()
 
@@ -99,4 +103,3 @@ def mk_save_dir(type: Literal["profile", "post", "reel"], root: str, list: Scann
     save_dir.mkdir(exist_ok=True, parents=True)
     log.info(f"{type.capitalize()}: Save dir created ✅")
     return save_dir
-
