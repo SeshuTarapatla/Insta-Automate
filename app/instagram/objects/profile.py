@@ -131,11 +131,11 @@ class Profile(ProfileModel):
         return dst
     
     @staticmethod
-    def get_or_create(id: str | None = None) -> "Profile":
+    def get_or_create(id: str | None = None, root: str | None = None) -> "Profile":
         if id is None:
             id = Profile.get_title()
         if Profile.exists(id):
             return Profile.get(id)
         else:
-            return Profile()
+            return Profile(root)
         

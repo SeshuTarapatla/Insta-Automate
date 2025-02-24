@@ -41,6 +41,11 @@ class Format:
         """Converts datetime object to instagram human readable date."""
         return dt.strftime("%Y-%m-%d %H:%M:%S")
 
+    @staticmethod
+    def href(id: str) -> str:
+        """Returns HREF link of given id."""
+        return f"https://instagram.com/{id}"
+
 def progress_bar() -> Progress:
     """Creates a progress bar for scanning.
 
