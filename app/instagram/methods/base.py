@@ -12,6 +12,7 @@ from app.instagram.objects.audit import Audit
 from app.instagram.objects.common import progress_bar
 from app.instagram.objects.profile import Profile
 from app.instagram.resource import resourceIds
+from app.vars import args
 from model.profiles import Relation
 from utils import device, scrcpy
 from utils.logger import console, log
@@ -121,13 +122,16 @@ class Base(ABC):
                 except KeyboardInterrupt:
                     exit(0)
             except Exception as exception:
-                try:
-                    stop()
-                    log.error(f"[white on red]{exception.__class__.__name__}[/] occurred. Reset the screen and press enter to continue or ctrl+c to kill.")
-                    console.input()
-                    resume()
-                except KeyboardInterrupt:
-                    exit(0)
+                if not args.auto:
+                    try:
+                        stop()
+                        log.error(f"[white on red]{exception.__class__.__name__}[/] occurred. Reset the screen and press enter to continue or ctrl+c to kill.")
+                        console.input()
+                        resume()
+                    except KeyboardInterrupt:
+                        exit(1)
+                else:
+                    raise exception
         review = len(list(self.save_dir.glob("*.jpg")))
         log.info(f"Scan complete. Total profiles scraped: [green]{task.completed}[/]. Profiles to review: [yellow]{review}[/]")
         
