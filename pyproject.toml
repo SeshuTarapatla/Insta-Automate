@@ -1,0 +1,10 @@
+[project]
+name = "insta-automate"
+version = "0.1.0"
+description = "Instagram scraping automation."
+readme = "README.md"
+authors = [
+    { name = "SeshuTarapatla", email = "seshu.tarapatla@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = []
