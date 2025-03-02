@@ -1,0 +1,24 @@
+[project]
+name = "insta-automate"
+version = "0.1.0"
+description = "Instagram methods automation."
+readme = "README.md"
+authors = [
+    { name = "SeshuTarapatla", email = "seshu.tarapatla@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "my-modules",
+    "psycopg2>=2.9.10",
+    "pyfiglet>=1.0.2",
+    "sqlalchemy>=2.0.38",
+]
+
+[tool.uv.sources]
+my-modules = { path = "../my-py-modules", editable = true }
+
+[dependency-groups]
+dev = [
+    "ipykernel>=6.29.5",
+    "ipywidgets>=8.1.5",
+]
