@@ -1,0 +1,33 @@
+[project]
+name = "insta-automate"
+version = "0.1.0"
+description = "Instagram automation flows."
+readme = "README.md"
+authors = [
+    { name = "SeshuTarapatla", email = "seshu.tarapatla@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "async-typer>=0.1.10",
+    "my-modules",
+    "prefect-k3s",
+]
+
+[project.scripts]
+insta-automate = "insta_automate:ia"
+ia = "insta_automate:ia"
+
+[build-system]
+requires = ["uv_build>=0.11.2,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+my-modules = { git = "https://github.com/SeshuTarapatla/my-modules.git" }
+prefect-k3s = { git = "https://github.com/SeshuTarapatla/Prefect-K3s.git" }
+tg-auth = { git = "https://github.com/SeshuTarapatla/TG-Auth.git" }
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.2.0",
+    "tg-auth",
+]
