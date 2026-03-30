@@ -12,7 +12,7 @@ from my_modules.logger import get_logger
 from my_modules.postgres import PostgresSecret
 from prefect_k3s.vars import PREFECT_IMAGE
 
-from insta_automate.vars import IA_IMAGE
+from insta_automate.vars import IA_DATABASE, IA_IMAGE
 
 log = get_logger(__name__)
 
@@ -27,7 +27,9 @@ def ia_build(prefix: str = IA_IMAGE):
     tag = f"{prefect_version}-python{python_version}"
     base_image = f"{PREFECT_IMAGE}:{tag}"
     custom_image = f"{prefix}:{tag}"
-    sqlalchemy_conn_url = PostgresSecret.get_connection_string(local=False)
+    sqlalchemy_conn_url = PostgresSecret.get_connection_string(
+        database=IA_DATABASE, local=False
+    )
 
     git = Git()
 
