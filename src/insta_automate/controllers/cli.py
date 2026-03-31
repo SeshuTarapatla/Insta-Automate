@@ -43,7 +43,7 @@ def ia_build(prefix: str = IA_IMAGE):
         (
             f"FROM {base_image}",
             "",
-            f"ENV SQLALCHEMY_CONN_URL={sqlalchemy_conn_url}",
+            f"ENV SQLALCHEMY_CONN_URL='{sqlalchemy_conn_url}'",
             f"RUN uv pip install git+{git.remote_url}@{git.current_branch}",
         )
     )

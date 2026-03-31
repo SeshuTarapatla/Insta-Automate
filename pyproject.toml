@@ -11,6 +11,7 @@ dependencies = [
     "async-typer>=0.1.10",
     "my-modules",
     "prefect-k3s",
+    "python-dotenv>=1.2.2",
 ]
 
 [project.scripts]
@@ -24,10 +25,8 @@ build-backend = "uv_build"
 [tool.uv.sources]
 my-modules = { git = "https://github.com/SeshuTarapatla/my-modules.git" }
 prefect-k3s = { git = "https://github.com/SeshuTarapatla/Prefect-K3s.git" }
-tg-auth = { git = "https://github.com/SeshuTarapatla/TG-Auth.git" }
 
 [dependency-groups]
 dev = [
     "ipykernel>=7.2.0",
-    "tg-auth",
 ]
