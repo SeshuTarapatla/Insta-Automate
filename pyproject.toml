@@ -12,6 +12,7 @@ dependencies = [
     "my-modules",
     "prefect-k3s",
     "python-dotenv>=1.2.2",
+    "telethon>=1.42.0",
 ]
 
 [project.scripts]

@@ -838,6 +838,7 @@ dependencies = [
     { name = "my-modules" },
     { name = "prefect-k3s" },
     { name = "python-dotenv" },
+    { name = "telethon" },
 ]
 
 [package.dev-dependencies]
@@ -852,6 +853,7 @@ requires-dist = [
     { name = "my-modules", git = "https://github.com/SeshuTarapatla/my-modules.git" },
     { name = "prefect-k3s", git = "https://github.com/SeshuTarapatla/Prefect-K3s.git" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
+    { name = "telethon", specifier = ">=1.42.0" },
 ]
 
 [package.metadata.requires-dev]
