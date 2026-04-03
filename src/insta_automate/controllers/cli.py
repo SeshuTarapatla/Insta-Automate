@@ -14,9 +14,10 @@ from prefect_k3s.vars import PREFECT_IMAGE
 from typer import Option
 
 from insta_automate.controllers.telegram import IaTelegramClient
-from insta_automate.vars import IA_DATABASE, IA_IMAGE
+from insta_automate.vars import BANNER, IA_DATABASE, IA_IMAGE
 
 log = get_logger(__name__)
+print(BANNER)
 
 ia = AsyncTyper(help="Insta Automate CLI.", add_completion=False, no_args_is_help=True)
 tl = AsyncTyper(
