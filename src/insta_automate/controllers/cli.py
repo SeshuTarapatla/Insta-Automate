@@ -17,16 +17,22 @@ from insta_automate.vars import IA_DATABASE, IA_IMAGE
 log = get_logger(__name__)
 
 ia = AsyncTyper(help="Insta Automate CLI.", add_completion=False, no_args_is_help=True)
+tl = AsyncTyper(name="tl", help="Telegram helper commands.")
+
+ia.add_typer(tl)
 
 
 @ia.command(name="build", help="Build [magenta]Insta-Automate[/] docker image.")
 def ia_build(prefix: str = IA_IMAGE):
+    from tg_auth import TelegramSecret
     started_at = now()
-    python_version = f"{version_info.major}.{version_info.minor}"
+
+    python_version  = f"{version_info.major}.{version_info.minor}"
     prefect_version = version("prefect")
-    tag = f"{prefect_version}-python{python_version}"
-    base_image = f"{PREFECT_IMAGE}:{tag}"
-    custom_image = f"{prefix}:{tag}"
+    tag             = f"{prefect_version}-python{python_version}"
+    base_image      = f"{PREFECT_IMAGE}:{tag}"
+    custom_image    = f"{prefix}:{tag}"
+
     sqlalchemy_conn_url = PostgresSecret.get_connection_string(
         database=IA_DATABASE, local=False
     )
@@ -43,7 +49,8 @@ def ia_build(prefix: str = IA_IMAGE):
         (
             f"FROM {base_image}",
             "",
-            f"ENV SQLALCHEMY_CONN_URL='{sqlalchemy_conn_url}'",
+            f"ENV SQLALCHEMY_CONN_URL={sqlalchemy_conn_url}",
+            *TelegramSecret.get().model_dump_env(),
             f"RUN uv pip install git+{git.remote_url}@{git.current_branch}",
         )
     )
@@ -52,5 +59,7 @@ def ia_build(prefix: str = IA_IMAGE):
     log.info(f"Build complete. Time taken: {now() - started_at}")
 
 
-@ia.command()
-def nan(): ...
+@tl.command(
+    name="verify", help="Verify telegram user and bot session from environment."
+)
+def tl_verify(): ...
