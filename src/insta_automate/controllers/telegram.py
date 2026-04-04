@@ -1,11 +1,20 @@
 from asyncio import wait_for
 from os import getenv
+from typing import Any, AsyncIterable
 
 from my_modules.helpers import handle_await
 from telethon import TelegramClient
 from telethon.sessions import StringSession
+from telethon.tl.custom.dialog import Dialog
+from telethon.tl.functions.channels import CreateChannelRequest, EditAdminRequest
+from telethon.types import Channel, ChatAdminRights, Updates
 
-from insta_automate.exceptions import TgAuthError
+from insta_automate.exceptions import (
+    TelegramChannelBotAdminError,
+    TelegramChannelCreateError,
+    TelegramChannelNotFound,
+    TgAuthError,
+)
 
 
 class BaseTelegramClient(TelegramClient):
@@ -37,6 +46,72 @@ class UserTelegramClient(BaseTelegramClient):
             return await wait_for(handle_await(_start), timeout=timeout)
         except TimeoutError:
             return None
+
+    async def iter_all_dialogs(self) -> AsyncIterable[Dialog]:
+        for archived in (False, True):
+            async for dialog in self.iter_dialogs(archived=archived):
+                yield dialog
+
+    async def get_channels(self) -> list[Channel]:
+        channels = [
+            dialog.entity
+            async for dialog in self.iter_all_dialogs()
+            if isinstance(dialog.entity, Channel)
+        ]
+        return channels
+
+    async def get_channel(self, title: str) -> Channel:
+        async for dialog in self.iter_all_dialogs():
+            if isinstance(dialog.entity, Channel) and dialog.entity.title == title:
+                return dialog.entity
+        raise TelegramChannelNotFound(
+            f'Telegram channel with title "{title}" is not found.'
+        )
+
+    async def create_channel(
+        self, title: str, *, about: str, broadcast: bool = True
+    ) -> Channel:
+        request = CreateChannelRequest(
+            title=title, about=about, megagroup=not broadcast
+        )
+        result = await self(request)
+        if (
+            isinstance(result, Updates)
+            and result.chats
+            and isinstance((channel := result.chats[0]), Channel)
+        ):
+            return channel
+        raise TelegramChannelCreateError(
+            f"Failed to create a Channel(title='{title}', about='{about}', broadcast={broadcast})"
+        )
+
+    async def add_bot_admin_to_channel(
+        self, channel: Channel, bot_username: str
+    ) -> Any:
+        try:
+            bot = await self.get_entity(bot_username)
+            admin_rights = ChatAdminRights(
+                anonymous=False,
+                change_info=True,
+                delete_messages=True,
+                edit_messages=True,
+                manage_direct_messages=True,
+                other=True,
+                pin_messages=True,
+                post_messages=True,
+            )
+            request = EditAdminRequest(
+                channel=channel,  # type: ignore
+                user_id=bot,  # type: ignore
+                admin_rights=admin_rights,
+                rank="Bot",
+            )
+            result = await self(request)
+            return result
+        except Exception as e:
+            raise TelegramChannelBotAdminError(
+                f"Failed to add @{bot_username} as admin to Channel(title='{channel.title}')"
+            ) from e
 
 
 class BotTelegramClient(BaseTelegramClient):
@@ -97,3 +172,16 @@ class IaTelegramClient(UserTelegramClient):
             raise TgAuthError("TG Auth credentials are missing from the environment.")
 
         self.TELEGRAM_API_ID = int(self.TELEGRAM_API_ID)
+
+    async def start(self, timeout: float = 2):
+        await super().start(timeout=timeout)
+        await self.bot.start(timeout=timeout)
+
+    async def create_channel(
+        self, title: str, *, about: str, broadcast: bool = True, bot_access: bool = True
+    ) -> Channel:
+        channel = await super().create_channel(
+            title=title, about=about, broadcast=broadcast
+        )
+
+        return channel

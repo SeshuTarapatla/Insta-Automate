@@ -1225,7 +1225,7 @@ wheels = [
 [[package]]
 name = "my-modules"
 version = "0.1.0"
-source = { git = "https://github.com/SeshuTarapatla/my-modules.git#d19dd03f4348d4438999ce4a4a214aade70c70f2" }
+source = { git = "https://github.com/SeshuTarapatla/my-modules.git#a04e2fad95495519345d3e132743701a6eb825a8" }
 dependencies = [
     { name = "adbutils" },
     { name = "kubernetes" },
