@@ -1,7 +1,8 @@
 from asyncio import wait_for
 from os import getenv
-from typing import Any, AsyncIterable
+from typing import Any, AsyncIterable, Literal, overload
 
+from dotenv import load_dotenv
 from my_modules.helpers import handle_await
 from telethon import TelegramClient
 from telethon.sessions import StringSession
@@ -12,7 +13,7 @@ from telethon.types import Channel, ChatAdminRights, Updates
 from insta_automate.exceptions import (
     TelegramChannelBotAdminError,
     TelegramChannelCreateError,
-    TelegramChannelNotFound,
+    TelegramChannelNotFoundError,
     TgAuthError,
 )
 
@@ -60,11 +61,23 @@ class UserTelegramClient(BaseTelegramClient):
         ]
         return channels
 
-    async def get_channel(self, title: str) -> Channel:
+    @overload
+    async def get_channel(
+        self, title: str, *, strict: Literal[False]
+    ) -> Channel | None: ...
+
+    @overload
+    async def get_channel(
+        self, title: str, *, strict: Literal[True] = True
+    ) -> Channel: ...
+
+    async def get_channel(self, title: str, *, strict: bool = True) -> Channel | None:
         async for dialog in self.iter_all_dialogs():
             if isinstance(dialog.entity, Channel) and dialog.entity.title == title:
                 return dialog.entity
-        raise TelegramChannelNotFound(
+        if not strict:
+            return None
+        raise TelegramChannelNotFoundError(
             f'Telegram channel with title "{title}" is not found.'
         )
 
@@ -150,6 +163,7 @@ class IaTelegramClient(UserTelegramClient):
         )
 
     def load_tg_auth(self):
+        load_dotenv()
         self.TELEGRAM_API_ID = getenv("TELEGRAM_API_ID", "")
         self.TELEGRAM_API_HASH = getenv("TELEGRAM_API_HASH", "")
         self.TELEGRAM_NUMBER = getenv("TELEGRAM_NUMBER", "")
@@ -173,8 +187,11 @@ class IaTelegramClient(UserTelegramClient):
 
         self.TELEGRAM_API_ID = int(self.TELEGRAM_API_ID)
 
+    async def start_(self, timeout: float = 2):
+        return await super().start(timeout=timeout)
+
     async def start(self, timeout: float = 2):
-        await super().start(timeout=timeout)
+        await self.start_(timeout=timeout)
         await self.bot.start(timeout=timeout)
 
     async def create_channel(
@@ -183,5 +200,6 @@ class IaTelegramClient(UserTelegramClient):
         channel = await super().create_channel(
             title=title, about=about, broadcast=broadcast
         )
-
+        if bot_access:
+            await self.add_bot_admin_to_channel(channel, self.TELEGRAM_BOT_NAME)
         return channel

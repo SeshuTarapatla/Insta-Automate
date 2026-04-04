@@ -11,10 +11,18 @@ from my_modules.git import Git
 from my_modules.logger import get_logger
 from my_modules.postgres import PostgresSecret
 from prefect_k3s.vars import PREFECT_IMAGE
+from telethon.types import Channel
 from typer import Option
 
 from insta_automate.controllers.telegram import IaTelegramClient
-from insta_automate.vars import BANNER, IA_DATABASE, IA_IMAGE
+from insta_automate.vars import (
+    BANNER,
+    IA_BACKUP_CHANNEL,
+    IA_DATABASE,
+    IA_ENTITY_CHANNEL,
+    IA_IMAGE,
+    IA_NOTIFY_CHANNEL,
+)
 
 log = get_logger(__name__)
 print(BANNER)
@@ -74,7 +82,7 @@ async def tl_verify(
     ),
 ):
     tl, exit_code = IaTelegramClient(), 0
-    if await tl.start(timeout=timeout):
+    if await tl.start_(timeout=timeout):
         log.info("Telegram User session: [dim green]CONNECTED![/]")
     else:
         log.error("Telegram User session: [dim red]DISCONNECTED![/]")
@@ -85,3 +93,42 @@ async def tl_verify(
         log.error("Telegram Bot  session: [dim red]DISCONNECTED![/]")
         exit_code = 1
     exit(exit_code)
+
+
+@tl.async_command(
+    name="init", help="Initialize Telegram session and channels for Insta Automate."
+)
+async def tl_init():
+    def channel_str(channel: Channel) -> str:
+        return f"Channel(id={channel.id}, title='{channel.title}')"
+
+    started_at = now()
+
+    tl = IaTelegramClient()
+    await tl.start()
+    if channel := await tl.get_channel(IA_ENTITY_CHANNEL, strict=False):
+        log.info(f"Entity channel found: {channel_str(channel)}")
+    else:
+        log.error("Entity channel not found. Creating one...")
+        channel = await tl.create_channel(
+            IA_ENTITY_CHANNEL, about="Insta Automate Entity Channel", broadcast=False
+        )
+        log.info(f"Entity channel created: {channel_str(channel)}")
+    if channel := await tl.get_channel(IA_BACKUP_CHANNEL, strict=False):
+        log.info(f"Backup channel found: {channel_str(channel)}")
+    else:
+        log.error("Backup channel not found. Creating one...")
+        channel = await tl.create_channel(
+            IA_BACKUP_CHANNEL, about="Insta Automate Backup Channel", broadcast=True
+        )
+        log.info(f"Backup channel created: {channel_str(channel)}")
+    if channel := await tl.get_channel(IA_NOTIFY_CHANNEL, strict=False):
+        log.info(f"Notify channel found: {channel_str(channel)}")
+    else:
+        log.error("Notify channel not found. Creating one...")
+        channel = await tl.create_channel(
+            IA_NOTIFY_CHANNEL, about="Insta Automate Notify Channel", broadcast=True
+        )
+        log.info(f"Notify channel created: {channel_str(channel)}")
+
+    log.info(f"Telegram initialization complete. Time taken: {now() - started_at}")

@@ -2,7 +2,7 @@ class TgAuthError(ValueError):
     """Exception raised when telegram auth credentials are missing in environment."""
 
 
-class TelegramChannelNotFound(RuntimeError):
+class TelegramChannelNotFoundError(RuntimeError):
     """Exception raised when a given Telegram channel is not found."""
 
 

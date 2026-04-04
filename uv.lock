@@ -2508,7 +2508,7 @@ wheels = [
 [[package]]
 name = "tg-auth"
 version = "0.1.0"
-source = { git = "https://github.com/SeshuTarapatla/TG-Auth.git#7dc956217900c90fb6e7aa0532ce4b8d732dfc95" }
+source = { git = "https://github.com/SeshuTarapatla/TG-Auth.git#909744ec4ee0c5f484e24b8c85d89243efe60a8e" }
 dependencies = [
     { name = "async-typer" },
     { name = "kubernetes" },
