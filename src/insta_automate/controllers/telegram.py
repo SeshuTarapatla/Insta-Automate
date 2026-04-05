@@ -3,7 +3,9 @@ from os import getenv
 from typing import Any, AsyncIterable, Literal, overload
 
 from dotenv import load_dotenv
+from my_modules.datetime_utils import now
 from my_modules.helpers import handle_await
+from my_modules.logger import get_logger
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 from telethon.tl.custom.dialog import Dialog
@@ -16,6 +18,9 @@ from insta_automate.exceptions import (
     TelegramChannelNotFoundError,
     TgAuthError,
 )
+from insta_automate.vars import IA_BACKUP_CHANNEL, IA_ENTITY_CHANNEL, IA_NOTIFY_CHANNEL
+
+log = get_logger(__name__)
 
 
 class BaseTelegramClient(TelegramClient):
@@ -146,7 +151,7 @@ class BotTelegramClient(BaseTelegramClient):
             return None
 
 
-class IaTelegramClient(UserTelegramClient):
+class IaTelegram(UserTelegramClient):
     def __init__(self) -> None:
         self.load_tg_auth()
         super().__init__(
@@ -203,3 +208,56 @@ class IaTelegramClient(UserTelegramClient):
         if bot_access:
             await self.add_bot_admin_to_channel(channel, self.TELEGRAM_BOT_NAME)
         return channel
+
+    @classmethod
+    async def verify(cls, timeout: float = 2):
+        tl, exit_code = cls(), 0
+        if await tl.start_(timeout=timeout):
+            log.info("Telegram User session: [dim green]CONNECTED![/]")
+        else:
+            log.error("Telegram User session: [dim red]DISCONNECTED![/]")
+            exit_code = 1
+        if await tl.bot.start(timeout=timeout):
+            log.info("Telegram Bot  session: [dim green]CONNECTED![/]")
+        else:
+            log.error("Telegram Bot  session: [dim red]DISCONNECTED![/]")
+            exit_code = 1
+        exit(exit_code)
+
+    @classmethod
+    async def init(cls):
+        def channel_str(channel: Channel) -> str:
+            return f"Channel(id={channel.id}, title='{channel.title}')"
+
+        started_at = now()
+
+        tl = cls()
+        await tl.start()
+        if channel := await tl.get_channel(IA_ENTITY_CHANNEL, strict=False):
+            log.info(f"Entity channel found: {channel_str(channel)}")
+        else:
+            log.error("Entity channel not found. Creating one...")
+            channel = await tl.create_channel(
+                IA_ENTITY_CHANNEL,
+                about="Insta Automate Entity Channel",
+                broadcast=False,
+            )
+            log.info(f"Entity channel created: {channel_str(channel)}")
+        if channel := await tl.get_channel(IA_BACKUP_CHANNEL, strict=False):
+            log.info(f"Backup channel found: {channel_str(channel)}")
+        else:
+            log.error("Backup channel not found. Creating one...")
+            channel = await tl.create_channel(
+                IA_BACKUP_CHANNEL, about="Insta Automate Backup Channel", broadcast=True
+            )
+            log.info(f"Backup channel created: {channel_str(channel)}")
+        if channel := await tl.get_channel(IA_NOTIFY_CHANNEL, strict=False):
+            log.info(f"Notify channel found: {channel_str(channel)}")
+        else:
+            log.error("Notify channel not found. Creating one...")
+            channel = await tl.create_channel(
+                IA_NOTIFY_CHANNEL, about="Insta Automate Notify Channel", broadcast=True
+            )
+            log.info(f"Notify channel created: {channel_str(channel)}")
+
+        log.info(f"Telegram initialization complete. Time taken: {now() - started_at}")

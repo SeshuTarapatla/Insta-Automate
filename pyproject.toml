@@ -12,6 +12,7 @@ dependencies = [
     "my-modules",
     "prefect-k3s",
     "python-dotenv>=1.2.2",
+    "sqlmodel>=0.0.38",
     "telethon>=1.42.0",
 ]
 
