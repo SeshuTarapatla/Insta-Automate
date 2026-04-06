@@ -18,5 +18,5 @@ IA_ENTITY_CHANNEL: str = "Insta Automate"
 IA_NOTIFY_CHANNEL: str = "Insta Notify"
 
 WINDOWS_HOST: str = get_wsl_host_ip()
-ANDROID_SERIAL: str = getenv("ADB_DEVICE_SERIAL", "")
+ANDROID_SERIAL: str = getenv("ANDROID_SERIAL", "")
 ADB_SERVER_SOCKET: str = f"tcp:{WINDOWS_HOST}:5037"
