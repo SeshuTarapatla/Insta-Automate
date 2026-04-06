@@ -1,17 +1,22 @@
 from my_modules.datetime_utils import now
 from my_modules.logger import get_logger
 from my_modules.postgres import Postgres
+from sqlmodel import SQLModel
 
+from insta_automate.models.entity import Entity
 from insta_automate.vars import IA_DATABASE
 
 log = get_logger(__name__)
 
 
-class IaPostgres:
-    @staticmethod
-    def init(drop: bool = False):
+class IaPostgres(Postgres):
+    def __init__(self) -> None:
+        super().__init__(IA_DATABASE)
+
+    @classmethod
+    def init(cls, drop: bool = False):
         started_at = now()
-        ia_db = Postgres(IA_DATABASE)
+        ia_db = cls()
         if drop:
             if ia_db.db_exists:
                 log.info(f"Dropping [cyan]{IA_DATABASE}[/] PostgreSQL database.")
@@ -23,4 +28,7 @@ class IaPostgres:
         else:
             log.info(f"Creating a new [cyan]{IA_DATABASE}[/] PostgreSQL database.")
             ia_db.create_db()
+        _ = [Entity]
+        log.info(f"Creating required tables for [cyan]{IA_DATABASE}[/] PostgreSQL database.")
+        SQLModel.metadata.create_all(bind=ia_db.engine)
         log.info(f"Database initialization complete. Time taken: {now() - started_at}")

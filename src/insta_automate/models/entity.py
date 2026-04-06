@@ -1,12 +1,26 @@
 from datetime import datetime
-from typing import Literal
+from enum import StrEnum, auto
 
 from my_modules.datetime_utils import now
 from sqlmodel import Field, SQLModel
 
-EntityType = Literal["profile", "post", "reel"]
-EntityAccess = Literal["public", "private"]
-EntityStatus = Literal["queued", "scanning", "failed", "completed"]
+
+class EntityType(StrEnum):
+    POST = auto()
+    PROFILE = auto()
+    REEL = auto()
+
+
+class EntityAccess(StrEnum):
+    PUBLIC = auto()
+    PRIVATE = auto()
+
+
+class EntityStatus(StrEnum):
+    QUEUED = auto()
+    SCANNING = auto()
+    FAILED = auto()
+    COMPLETED = auto()
 
 
 class Entity(SQLModel, table=True):
