@@ -1,4 +1,5 @@
 from importlib.resources import files
+from os import getenv
 from pathlib import Path
 from typing import cast
 
@@ -14,3 +15,5 @@ IA_DATABASE: str = "insta_automate"
 IA_BACKUP_CHANNEL: str = "Insta Backup"
 IA_ENTITY_CHANNEL: str = "Insta Automate"
 IA_NOTIFY_CHANNEL: str = "Insta Notify"
+
+ADB_DEVICE_SERIAL: str = getenv("ADB_DEVICE_SERIAL", "")

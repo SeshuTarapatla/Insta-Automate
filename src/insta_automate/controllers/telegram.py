@@ -158,7 +158,7 @@ class BotTelegramClient(BaseTelegramClient):
         except TimeoutError:
             return None
 
-    async def notify(self, message: str) -> Message:
+    async def notify(self, message: str, log_: bool = True) -> Message:
         if self.notify_channel_id:
             return await self.send_message(self.notify_channel_id, message=message)
         else:
