@@ -16,4 +16,6 @@ IA_BACKUP_CHANNEL: str = "Insta Backup"
 IA_ENTITY_CHANNEL: str = "Insta Automate"
 IA_NOTIFY_CHANNEL: str = "Insta Notify"
 
-ADB_DEVICE_SERIAL: str = getenv("ADB_DEVICE_SERIAL", "")
+WINDOWS_HOST: str = getenv("WINDOWS_HOST", "")
+ANDROID_SERIAL: str = getenv("ADB_DEVICE_SERIAL", "")
+ADB_SERVER_SOCKET: str = f"tcp:{WINDOWS_HOST}:5037"

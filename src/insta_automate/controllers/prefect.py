@@ -4,7 +4,7 @@ from my_modules.logger import get_logger
 
 from insta_automate.controllers.device import IaDevice
 from insta_automate.controllers.telegram import IaTelegram
-from insta_automate.vars import ADB_DEVICE_SERIAL
+from insta_automate.vars import ANDROID_SERIAL
 
 log = get_logger(__name__)
 
@@ -24,7 +24,7 @@ class Prefect:
                 notified = True
             await asyncio.sleep(5)
         self.device_connected = True
-        msg = f"ADB Device connected: {ADB_DEVICE_SERIAL}"
+        msg = f"ADB Device connected: {ANDROID_SERIAL}"
         log.info(msg)
         if notified:
             await self.tl.bot.notify(msg)

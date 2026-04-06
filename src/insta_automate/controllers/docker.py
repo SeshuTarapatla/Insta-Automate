@@ -10,7 +10,7 @@ from my_modules.postgres import PostgresSecret
 from my_modules.win32 import get_wsl_host_ip
 from prefect_k3s.vars import PREFECT_IMAGE
 
-from insta_automate.vars import ADB_DEVICE_SERIAL, IA_DATABASE
+from insta_automate.vars import ADB_SERVER_SOCKET, ANDROID_SERIAL, IA_DATABASE
 
 log = get_logger(__name__)
 
@@ -46,7 +46,8 @@ class IaDocker:
                 "",
                 f"ENV SQLALCHEMY_CONN_URL={sqlalchemy_conn_url}",
                 f"ENV WINDOWS_HOST={get_wsl_host_ip()}",
-                f"ENV ADB_DEVICE_SERIAL={ADB_DEVICE_SERIAL}",
+                f"ENV ADB_SERVER_SOCKET={ADB_SERVER_SOCKET}",
+                f"ENV ANDROID_SERIAL={ANDROID_SERIAL}",
                 *TelegramSecret.get().model_dump_env(),
                 "",
                 f"RUN uv pip install git+{git.remote_url}@{git.current_branch}",
