@@ -1,8 +1,12 @@
 __all__ = ["adb"]
 
-from adbutils import adb
+from sys import platform
 
-from insta_automate.vars import ANDROID_SERIAL
+from adbutils import AdbClient, adb
+
+from insta_automate.vars import ANDROID_SERIAL, WINDOWS_HOST
+
+adb = adb if platform == "win32" else AdbClient(WINDOWS_HOST, 5037)
 
 
 class IaDevice:

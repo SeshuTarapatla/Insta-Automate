@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import cast
 
 from dotenv import load_dotenv
+from my_modules.win32 import get_wsl_host_ip
 
 load_dotenv()
 
@@ -16,6 +17,6 @@ IA_BACKUP_CHANNEL: str = "Insta Backup"
 IA_ENTITY_CHANNEL: str = "Insta Automate"
 IA_NOTIFY_CHANNEL: str = "Insta Notify"
 
-WINDOWS_HOST: str = getenv("WINDOWS_HOST", "")
+WINDOWS_HOST: str = get_wsl_host_ip()
 ANDROID_SERIAL: str = getenv("ADB_DEVICE_SERIAL", "")
 ADB_SERVER_SOCKET: str = f"tcp:{WINDOWS_HOST}:5037"
