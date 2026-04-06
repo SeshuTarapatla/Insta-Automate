@@ -10,13 +10,19 @@ from telethon import TelegramClient
 from telethon.sessions import StringSession
 from telethon.tl.custom.dialog import Dialog
 from telethon.tl.functions.channels import CreateChannelRequest, EditAdminRequest
-from telethon.types import Channel, ChatAdminRights, Updates
+from telethon.types import (
+    Channel,
+    ChatAdminRights,
+    Message,
+    Updates,
+)
 
 from insta_automate.exceptions import (
+    TelegramAuthEnvironmentError,
+    TelegramBotNotifyChannelEmpty,
     TelegramChannelBotAdminError,
     TelegramChannelCreateError,
     TelegramChannelNotFoundError,
-    TgAuthError,
 )
 from insta_automate.vars import IA_BACKUP_CHANNEL, IA_ENTITY_CHANNEL, IA_NOTIFY_CHANNEL
 
@@ -139,8 +145,10 @@ class BotTelegramClient(BaseTelegramClient):
         api_id: int | str,
         api_hash: str,
         bot_token: str,
+        notify_channel_id: int | None = None,
     ) -> None:
         self.bot_token = bot_token
+        self.notify_channel_id = notify_channel_id
         super().__init__(session, api_id, api_hash)
 
     async def start(self, timeout: float = 2):  # type: ignore[override]
@@ -149,6 +157,12 @@ class BotTelegramClient(BaseTelegramClient):
             return await wait_for(handle_await(_start), timeout=timeout)
         except TimeoutError:
             return None
+
+    async def notify(self, message: str) -> Message:
+        if self.notify_channel_id:
+            return await self.send_message(self.notify_channel_id, message=message)
+        else:
+            raise TelegramBotNotifyChannelEmpty("Notify channel is not set.")
 
 
 class IaTelegram(UserTelegramClient):
@@ -188,7 +202,9 @@ class IaTelegram(UserTelegramClient):
                 self.TELEGRAM_BOT_SESSION,
             ]
         ):
-            raise TgAuthError("TG Auth credentials are missing from the environment.")
+            raise TelegramAuthEnvironmentError(
+                "TG Auth credentials are missing from the environment."
+            )
 
         self.TELEGRAM_API_ID = int(self.TELEGRAM_API_ID)
 
@@ -197,6 +213,9 @@ class IaTelegram(UserTelegramClient):
 
     async def start(self, timeout: float = 2):
         await self.start_(timeout=timeout)
+        notify_channel = await self.get_channel(IA_NOTIFY_CHANNEL, strict=False)
+        if notify_channel:
+            self.bot.notify_channel_id = await self.get_peer_id(notify_channel)
         await self.bot.start(timeout=timeout)
 
     async def create_channel(

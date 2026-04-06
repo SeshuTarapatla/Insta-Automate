@@ -1,4 +1,4 @@
-class TgAuthError(ValueError):
+class TelegramAuthEnvironmentError(EnvironmentError):
     """Exception raised when telegram auth credentials are missing in environment."""
 
 
@@ -12,3 +12,6 @@ class TelegramChannelCreateError(RuntimeError):
 
 class TelegramChannelBotAdminError(RuntimeError):
     """Exception raised when failed to add given bot as an admin to a channel."""
+
+class TelegramBotNotifyChannelEmpty(ValueError):
+    """Exception raised when a bot user tries to notify without setting the notify channel."""
