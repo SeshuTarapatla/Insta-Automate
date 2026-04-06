@@ -6,7 +6,7 @@ from adbutils import AdbClient
 
 from insta_automate.vars import ADB_DEVICE_SERIAL
 
-adb = AdbClient(getenv("WINDOWS_HOST"))
+adb = AdbClient(getenv("WINDOWS_HOST"), port=5037)
 
 
 class IaDevice:
