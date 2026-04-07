@@ -30,6 +30,7 @@ class IaDevice(Device):
         self.pin = pin
         self.ui = IaUI(self)
         self.package = package
+        self.unlock()
         self.start_scrcpy()
 
     def __call__(
@@ -43,12 +44,12 @@ class IaDevice(Device):
     def start_scrcpy(self):
         if platform != "win32":
             return
-        if self.locked:
-            self.unlock()
         self.scrcpy = Scrcpy(self.serial)
         self.scrcpy.start()
 
     def unlock(self):
+        if not self.locked:
+            return
         self.ui.charging_animation.wait_gone()
         self.screen_on()
         self.swipe(0, 2000, 0, 0, steps=5)
