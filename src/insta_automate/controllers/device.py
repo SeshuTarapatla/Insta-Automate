@@ -26,7 +26,7 @@ class IaDevice(Device):
         pin: str = ANDROID_PIN,
         package: str = IA_PACKAGE_NAME,
     ):
-        super().__init__(serial)
+        super().__init__(adb.device(serial))
         self.pin = pin
         self.ui = IaUI(self)
         self.package = package
