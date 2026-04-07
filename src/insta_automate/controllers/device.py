@@ -41,6 +41,8 @@ class IaDevice(Device):
         return super().__call__(**kwargs)
 
     def start_scrcpy(self):
+        if platform == "win32":
+            return
         if self.locked:
             self.unlock()
         self.scrcpy = Scrcpy(self.serial)
