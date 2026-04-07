@@ -1,7 +1,7 @@
 from importlib.resources import files
 from os import getenv
 from pathlib import Path
-from typing import cast
+from typing import Literal, cast
 
 from dotenv import load_dotenv
 from my_modules.win32 import get_wsl_host_ip
@@ -16,7 +16,9 @@ IA_DATABASE: str = "insta_automate"
 IA_BACKUP_CHANNEL: str = "Insta Backup"
 IA_ENTITY_CHANNEL: str = "Insta Automate"
 IA_NOTIFY_CHANNEL: str = "Insta Notify"
+IA_PACKAGE_NAME: Literal["com.instagram.android"] = "com.instagram.android"
 
 WINDOWS_HOST: str = get_wsl_host_ip()
 ANDROID_SERIAL: str = getenv("ANDROID_SERIAL", "")
+ANDROID_PIN: str = getenv("ANDROID_PIN", "")
 ADB_SERVER_SOCKET: str = f"tcp:{WINDOWS_HOST}:5037"

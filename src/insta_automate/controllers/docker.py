@@ -6,11 +6,9 @@ from sys import version_info
 from my_modules.datetime_utils import now
 from my_modules.git import Git
 from my_modules.logger import get_logger
-from my_modules.postgres import PostgresSecret
-from my_modules.win32 import get_wsl_host_ip
 from prefect_k3s.vars import PREFECT_IMAGE
 
-from insta_automate.vars import ADB_SERVER_SOCKET, ANDROID_SERIAL, IA_DATABASE
+from insta_automate.models.docker import DockerEnv
 
 log = get_logger(__name__)
 
@@ -27,11 +25,6 @@ class IaDocker:
         tag = f"{prefect_version}-python{python_version}"
         base_image = f"{PREFECT_IMAGE}:{tag}"
         custom_image = f"{prefix}:{tag}"
-
-        sqlalchemy_conn_url = PostgresSecret.get_connection_string(
-            database=IA_DATABASE, local=False
-        )
-
         git = Git()
 
         log.info(f"Current python version: {python_version}")
@@ -44,10 +37,7 @@ class IaDocker:
             (
                 f"FROM {base_image}",
                 "",
-                f"ENV SQLALCHEMY_CONN_URL={sqlalchemy_conn_url}",
-                f"ENV WINDOWS_HOST={get_wsl_host_ip()}",
-                f"ENV ADB_SERVER_SOCKET={ADB_SERVER_SOCKET}",
-                f"ENV ANDROID_SERIAL={ANDROID_SERIAL}",
+                *DockerEnv().model_dump_env(),
                 *TelegramSecret.get().model_dump_env(),
                 "",
                 f"RUN uv pip install git+{git.remote_url}@{git.current_branch}",
