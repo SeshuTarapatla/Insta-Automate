@@ -47,6 +47,7 @@ class IaDevice(Device):
         self.scrcpy.start()
 
     def unlock(self):
+        self.ui.charging_animation.wait_gone()
         self.screen_on()
         self.swipe(0, 2000, 0, 0, steps=5)
         for digit in self.pin:
@@ -87,6 +88,7 @@ class IaUI:
 
         self.lock_screen = self.resourceId("keyguard_root_view", "system")
         self.pin_enter = self.resourceId("key_enter", "system")
+        self.charging_animation = self.resourceId("charge_screen_view", "vivo")
 
     def pin_digit(self, digit: int | str) -> UiObject:
         return self.device(self._resourceId("vivo_digit_text", "system"), str(digit))
@@ -94,14 +96,18 @@ class IaUI:
     def _resourceId(
         self,
         key: str,
-        app: Literal["system", "instagram"] = "instagram",
+        app: Literal["system", "vivo", "instagram"] = "instagram",
     ) -> str:
-        root = {"system": "com.android.systemui", "instagram": IA_PACKAGE_NAME}[app]
+        root = {
+            "system": "com.android.systemui",
+            "vivo": "com.vivo.systemuiplugin",
+            "instagram": IA_PACKAGE_NAME,
+        }[app]
         return f"{root}:id/{key}"
 
     def resourceId(
         self,
         key: str,
-        app: Literal["system", "instagram"] = "instagram",
+        app: Literal["system", "vivo", "instagram"] = "instagram",
     ) -> UiObject:
         return self.device(self._resourceId(key, app))
