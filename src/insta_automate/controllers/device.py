@@ -5,6 +5,7 @@ from sys import platform
 from typing import Literal
 
 from adbutils import AdbClient, adb
+from my_modules.logger import get_logger
 from my_modules.scrcpy import Scrcpy
 from uiautomator2 import Device
 from uiautomator2._selector import UiObject
@@ -17,6 +18,7 @@ from insta_automate.vars import (
 )
 
 adb = adb if platform == "win32" else AdbClient(WINDOWS_HOST, 5037)
+log = get_logger(__name__)
 
 
 class IaDevice(Device):
@@ -50,6 +52,7 @@ class IaDevice(Device):
     def unlock(self):
         if not self.locked:
             return
+        log.info("Device is locked. Unlocking the device...")
         self.ui.charging_animation.wait_gone()
         self.screen_on()
         self.swipe(0, 2000, 0, 0, steps=5)
