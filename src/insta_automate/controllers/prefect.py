@@ -1,6 +1,8 @@
 import asyncio
+from typing import cast
 
 from my_modules.logger import get_logger
+from telethon.types import Message
 
 from insta_automate.controllers.device import IaDevice, IaUI
 from insta_automate.controllers.telegram import IaTelegram
@@ -15,19 +17,19 @@ class Prefect:
         self.device_connected: bool = False
 
     async def wait_for_device(self):
-        notified: bool = False
+        notification: Message = cast(Message, None)
         while not IaDevice.connected():
-            if not notified:
+            if notification is None:
                 msg = "No ADB device found! Please connect and android device."
                 log.error(msg)
-                await self.tl.bot.notify(msg)
-                notified = True
+                notification = await self.tl.bot.notify(msg)
             await asyncio.sleep(1)
         self.device_connected = True
         msg = f"ADB Device connected: {ANDROID_SERIAL}"
         log.info(msg)
-        if notified:
-            await self.tl.bot.notify(msg)
+        if notification is not None:
+            await self.tl.bot.notify(msg, transient=True)
+            await self.tl.delete_message(notification)
         self.ui = IaUI()
         self.device = self.ui.device
         self.device.app_restart()

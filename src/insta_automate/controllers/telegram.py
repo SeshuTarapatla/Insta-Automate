@@ -1,3 +1,4 @@
+import asyncio
 from asyncio import wait_for
 from os import getenv
 from typing import Any, AsyncIterable, Literal, overload
@@ -39,6 +40,9 @@ class BaseTelegramClient(TelegramClient):
         session = StringSession(session) if isinstance(session, str) else session
         api_id = int(api_id)
         super().__init__(session=session, api_id=api_id, api_hash=api_hash)
+
+    async def delete_message(self, message: Message):
+        return await self.delete_messages(message.peer_id, message)
 
 
 class UserTelegramClient(BaseTelegramClient):
@@ -158,9 +162,28 @@ class BotTelegramClient(BaseTelegramClient):
         except TimeoutError:
             return None
 
-    async def notify(self, message: str, log_: bool = True) -> Message:
+    @overload
+    async def notify(self, message: str, transient: Literal[True]) -> None: ...
+
+    @overload
+    async def notify(
+        self, message: str, transient: Literal[False] = False
+    ) -> Message: ...
+
+    async def notify(
+        self,
+        message: str,
+        transient: bool = False,
+    ) -> Message | None:
         if self.notify_channel_id:
-            return await self.send_message(self.notify_channel_id, message=message)
+            notification = await self.send_message(
+                self.notify_channel_id, message=message
+            )
+            if transient:
+                await asyncio.sleep(5)
+                await self.delete_message(notification)
+            else:
+                return notification
         else:
             raise TelegramBotNotifyChannelEmpty("Notify channel is not set.")
 
