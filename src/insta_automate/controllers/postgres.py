@@ -18,17 +18,19 @@ class IaPostgres(Postgres):
         started_at = now()
         ia_db = cls()
         if drop:
-            if ia_db.db_exists:
+            if ia_db.exists:
                 log.info(f"Dropping [cyan]{IA_DATABASE}[/] PostgreSQL database.")
                 ia_db.drop_db(force=True)
             else:
                 log.warning("No PostgreSQL database found to drop.")
-        if ia_db.db_exists:
+        if ia_db.exists:
             log.info(f"[cyan]{IA_DATABASE}[/] PostgreSQL database already exists.")
         else:
             log.info(f"Creating a new [cyan]{IA_DATABASE}[/] PostgreSQL database.")
             ia_db.create_db()
         _ = [Entity]
-        log.info(f"Creating required tables for [cyan]{IA_DATABASE}[/] PostgreSQL database.")
+        log.info(
+            f"Creating required tables for [cyan]{IA_DATABASE}[/] PostgreSQL database."
+        )
         SQLModel.metadata.create_all(bind=ia_db.engine)
         log.info(f"Database initialization complete. Time taken: {now() - started_at}")

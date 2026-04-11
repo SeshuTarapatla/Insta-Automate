@@ -13,5 +13,10 @@ class TelegramChannelCreateError(RuntimeError):
 class TelegramChannelBotAdminError(RuntimeError):
     """Exception raised when failed to add given bot as an admin to a channel."""
 
+
 class TelegramBotNotifyChannelEmpty(ValueError):
     """Exception raised when a bot user tries to notify without setting the notify channel."""
+
+
+class IaTelegramBackupNotFound(FileNotFoundError):
+    """Exception raised when there is no Insta Automate backup found to restore."""

@@ -1,6 +1,7 @@
 import asyncio
 from asyncio import wait_for
 from os import getenv
+from pathlib import Path
 from typing import Any, AsyncIterable, Literal, overload
 
 from dotenv import load_dotenv
@@ -19,13 +20,19 @@ from telethon.types import (
 )
 
 from insta_automate.exceptions import (
+    IaTelegramBackupNotFound,
     TelegramAuthEnvironmentError,
     TelegramBotNotifyChannelEmpty,
     TelegramChannelBotAdminError,
     TelegramChannelCreateError,
     TelegramChannelNotFoundError,
 )
-from insta_automate.vars import IA_BACKUP_CHANNEL, IA_ENTITY_CHANNEL, IA_NOTIFY_CHANNEL
+from insta_automate.vars import (
+    IA_BACKUP_CHANNEL,
+    IA_DATABASE,
+    IA_ENTITY_CHANNEL,
+    IA_NOTIFY_CHANNEL,
+)
 
 log = get_logger(__name__)
 
@@ -234,12 +241,16 @@ class IaTelegram(UserTelegramClient):
     async def start_(self, timeout: float = 2):
         return await super().start(timeout=timeout)
 
-    async def start(self, timeout: float = 2):
+    async def start(self, timeout: float = 2, channels: bool = True):
         await self.start_(timeout=timeout)
-        notify_channel = await self.get_channel(IA_NOTIFY_CHANNEL, strict=False)
-        if notify_channel:
-            self.bot.notify_channel_id = await self.get_peer_id(notify_channel)
+        await self.channels_init() if channels else None
         await self.bot.start(timeout=timeout)
+
+    async def channels_init(self):
+        self.entity_channel = await self.get_channel(IA_ENTITY_CHANNEL)
+        self.backup_channel = await self.get_channel(IA_BACKUP_CHANNEL)
+        self.notify_channel = await self.get_channel(IA_NOTIFY_CHANNEL)
+        self.bot.notify_channel_id = await self.get_peer_id(self.notify_channel)
 
     async def create_channel(
         self, title: str, *, about: str, broadcast: bool = True, bot_access: bool = True
@@ -250,6 +261,33 @@ class IaTelegram(UserTelegramClient):
         if bot_access:
             await self.add_bot_admin_to_channel(channel, self.TELEGRAM_BOT_NAME)
         return channel
+
+    async def backup(self, file: Path):
+        log.info(
+            f"Uploading '{file.name}' to [bold magenta]{IA_BACKUP_CHANNEL}[/] channel."
+        )
+        await self.send_file(self.backup_channel, file=file.as_posix())
+        log.info("Upload complete. Backup [bold green]successful[/].")
+
+    async def fetch_last_backup(self) -> Path:
+        async for msg in self.iter_messages(self.backup_channel, limit=1, min_id=1):
+            log.info(
+                f"Downloading last backup of [blue]{IA_DATABASE}[/]: '{msg.document.attributes[0].file_name}'"
+            )
+            backup = await self.download_media(msg)
+            if self.backup:
+                backup_file = Path(str(backup))
+                log.info(f"File downloaded: '{backup_file.as_posix()}'")
+                return backup_file
+        raise IaTelegramBackupNotFound(
+            f"No backup found for {IA_DATABASE} database."
+        )
+
+    @classmethod
+    async def get_client(cls) -> "IaTelegram":
+        self = cls()
+        await self.start()
+        return self
 
     @classmethod
     async def verify(cls, timeout: float = 2):
@@ -266,17 +304,19 @@ class IaTelegram(UserTelegramClient):
             exit_code = 1
         exit(exit_code)
 
+    @staticmethod
+    def channel_str(channel: Channel) -> str:
+        return f"Channel(id={channel.id}, title='{channel.title}')"
+
     @classmethod
-    async def init(cls):
-        def channel_str(channel: Channel) -> str:
-            return f"Channel(id={channel.id}, title='{channel.title}')"
+    async def ia_init(cls):
 
         started_at = now()
 
         tl = cls()
-        await tl.start()
+        await tl.start(channels=False)
         if channel := await tl.get_channel(IA_ENTITY_CHANNEL, strict=False):
-            log.info(f"Entity channel found: {channel_str(channel)}")
+            log.info(f"Entity channel found: {cls.channel_str(channel)}")
         else:
             log.error("Entity channel not found. Creating one...")
             channel = await tl.create_channel(
@@ -284,22 +324,22 @@ class IaTelegram(UserTelegramClient):
                 about="Insta Automate Entity Channel",
                 broadcast=False,
             )
-            log.info(f"Entity channel created: {channel_str(channel)}")
+            log.info(f"Entity channel created: {cls.channel_str(channel)}")
         if channel := await tl.get_channel(IA_BACKUP_CHANNEL, strict=False):
-            log.info(f"Backup channel found: {channel_str(channel)}")
+            log.info(f"Backup channel found: {cls.channel_str(channel)}")
         else:
             log.error("Backup channel not found. Creating one...")
             channel = await tl.create_channel(
                 IA_BACKUP_CHANNEL, about="Insta Automate Backup Channel", broadcast=True
             )
-            log.info(f"Backup channel created: {channel_str(channel)}")
+            log.info(f"Backup channel created: {cls.channel_str(channel)}")
         if channel := await tl.get_channel(IA_NOTIFY_CHANNEL, strict=False):
-            log.info(f"Notify channel found: {channel_str(channel)}")
+            log.info(f"Notify channel found: {cls.channel_str(channel)}")
         else:
             log.error("Notify channel not found. Creating one...")
             channel = await tl.create_channel(
                 IA_NOTIFY_CHANNEL, about="Insta Automate Notify Channel", broadcast=True
             )
-            log.info(f"Notify channel created: {channel_str(channel)}")
+            log.info(f"Notify channel created: {cls.channel_str(channel)}")
 
         log.info(f"Telegram initialization complete. Time taken: {now() - started_at}")
