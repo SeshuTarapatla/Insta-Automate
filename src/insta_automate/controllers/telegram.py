@@ -41,7 +41,8 @@ class BaseTelegramClient(TelegramClient):
         api_id = int(api_id)
         super().__init__(session=session, api_id=api_id, api_hash=api_hash)
 
-    async def delete_message(self, message: Message):
+    async def delete_message(self, message: Message, delay: float = 0):
+        await asyncio.sleep(delay)
         return await self.delete_messages(message.peer_id, message)
 
 
@@ -180,8 +181,7 @@ class BotTelegramClient(BaseTelegramClient):
                 self.notify_channel_id, message=message
             )
             if transient:
-                await asyncio.sleep(5)
-                await self.delete_message(notification)
+                asyncio.create_task(self.delete_message(notification, delay=5))
             else:
                 return notification
         else:
