@@ -13,6 +13,8 @@ from uiautomator2._selector import UiObject
 from insta_automate.vars import (
     ANDROID_PIN,
     ANDROID_SERIAL,
+    IA_ALT_ACCOUNT,
+    IA_MAIN_ACCOUNT,
     IA_PACKAGE_NAME,
     WINDOWS_HOST,
 )
@@ -79,6 +81,24 @@ class IaDevice(Device):
         Path(dump_file).write_text(dump, encoding="utf-8")
         return True
 
+    def switch_account(self, account: Literal["main", "alt"]) -> bool:
+        match account:
+            case "main":
+                switch = self.ui.main_account.click
+            case "alt":
+                switch = self.ui.alt_account.click
+            case _:
+                raise ValueError(
+                    f'{account} is not a valid account identifier. Use: ["main", "alt"].'
+                )
+        if not self.ui.profile_tab.exists():
+            self.app_restart()
+            self.ui.profile_tab.wait()
+        self.ui.profile_tab.long_click()
+        switch()
+        self.press("back")
+        return True
+
     @property
     def locked(self) -> bool:
         return self.ui.lock_screen.exists()
@@ -92,9 +112,15 @@ class IaUI:
     def __init__(self, device: IaDevice | None = None) -> None:
         self.device = device if device else IaDevice()
 
+        # system
         self.lock_screen = self.resourceId("keyguard_root_view", "system")
         self.pin_enter = self.resourceId("key_enter", "system")
         self.charging_animation = self.resourceId("charge_screen_view", "vivo")
+
+        # app
+        self.profile_tab = self.resourceId("profile_tab")
+        self.main_account = self.text(IA_MAIN_ACCOUNT)
+        self.alt_account = self.text(IA_ALT_ACCOUNT)
 
     def pin_digit(self, digit: int | str) -> UiObject:
         return self.device(self._resourceId("vivo_digit_text", "system"), str(digit))
@@ -117,3 +143,6 @@ class IaUI:
         app: Literal["system", "vivo", "instagram"] = "instagram",
     ) -> UiObject:
         return self.device(self._resourceId(key, app))
+
+    def text(self, text: str) -> UiObject:
+        return self.device(text=text)

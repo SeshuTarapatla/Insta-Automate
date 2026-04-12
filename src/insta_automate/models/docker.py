@@ -7,6 +7,8 @@ from insta_automate.vars import (
     ANDROID_PIN,
     ANDROID_SERIAL,
     IA_DATABASE,
+    IA_MAIN_ACCOUNT,
+    IA_ALT_ACCOUNT,
 )
 
 
@@ -14,10 +16,12 @@ class DockerEnv(BaseModel):
     SQLALCHEMY_CONN_URL: str = PostgresSecret.get_connection_string(
         database=IA_DATABASE, local=False
     )
-    WINDOWS_HOST: str = get_wsl_host_ip()
     ADB_SERVER_SOCKET: str = ADB_SERVER_SOCKET
-    ANDROID_SERIAL: str = ANDROID_SERIAL
     ANDROID_PIN: str = ANDROID_PIN
+    ANDROID_SERIAL: str = ANDROID_SERIAL
+    IA_ALT_ACCOUNT: str = IA_ALT_ACCOUNT
+    IA_MAIN_ACCOUNT: str = IA_MAIN_ACCOUNT
+    WINDOWS_HOST: str = get_wsl_host_ip()
 
     def model_dump_env(self) -> list[str]:
         return [f"ENV {key}='{value}'" for key, value in self.model_dump().items()]
