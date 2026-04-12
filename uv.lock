@@ -1313,7 +1313,7 @@ wheels = [
 [[package]]
 name = "my-modules"
 version = "0.1.0"
-source = { git = "https://github.com/SeshuTarapatla/my-modules.git#68364fe13881c774eaac19d939639788ccb1f435" }
+source = { git = "https://github.com/SeshuTarapatla/my-modules.git#c72e460d61d3743f8448448758474b2dc683f060" }
 dependencies = [
     { name = "adbutils" },
     { name = "kubernetes" },
@@ -1648,7 +1648,7 @@ wheels = [
 [[package]]
 name = "prefect-k3s"
 version = "0.1.0"
-source = { git = "https://github.com/SeshuTarapatla/Prefect-K3s.git#72c2174aebd2ef4c1bd0c6732257f683bb67d454" }
+source = { git = "https://github.com/SeshuTarapatla/Prefect-K3s.git#38317b19e495ec6c203928d826f326ed9ea26fdb" }
 dependencies = [
     { name = "my-modules" },
     { name = "prefect" },
