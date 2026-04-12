@@ -1,7 +1,9 @@
+__all__ = ["IaPostgres", "SessionLocal"]
+
 from my_modules.datetime_utils import now
 from my_modules.logger import get_logger
 from my_modules.postgres import Postgres
-from sqlmodel import SQLModel
+from sqlmodel import SQLModel, Session
 
 from insta_automate.models.entity import Entity
 from insta_automate.vars import IA_DATABASE
@@ -34,3 +36,10 @@ class IaPostgres(Postgres):
         )
         SQLModel.metadata.create_all(bind=ia_db.engine)
         log.info(f"Database initialization complete. Time taken: {now() - started_at}")
+
+
+engine = IaPostgres().engine
+
+
+def SessionLocal() -> Session:
+    return Session(bind=engine)

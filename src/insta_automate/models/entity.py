@@ -1,8 +1,13 @@
 from datetime import datetime
 from enum import StrEnum, auto
+from typing import Self
+from urllib.parse import urlparse, urlunparse
 
 from my_modules.datetime_utils import now
+from pydantic import field_validator, model_validator
 from sqlmodel import Field, SQLModel
+
+from insta_automate.exceptions import InvalidIAEntityUrl
 
 
 class EntityType(StrEnum):
@@ -25,13 +30,39 @@ class EntityStatus(StrEnum):
 
 class Entity(SQLModel, table=True):
     url: str = Field(primary_key=True)
-    id: str
-    type: EntityType
-    access: EntityAccess
+    id: str = Field(default=None)
+    type: EntityType = Field(default=None)
+    access: EntityAccess = Field(default=EntityAccess.PRIVATE)
     added_on: datetime = Field(default_factory=now)
     updated_on: datetime = Field(
         default_factory=now, sa_column_kwargs={"onupdate": now}
     )
-    scanned: int = Field(ge=0)
-    scraped: int = Field(ge=0)
-    status: EntityStatus
+    scanned: int = Field(default=0, ge=0)
+    scraped: int = Field(default=0, ge=0)
+    status: EntityStatus = EntityStatus.QUEUED
+
+    @field_validator("url")
+    @classmethod
+    def is_valid_entity_url(cls, value: str) -> str:
+        try:
+            url = urlparse(value)
+            if url.netloc != "www.instagram.com":
+                raise InvalidIAEntityUrl
+            return urlunparse(url._replace(query="")).removesuffix("/")
+        except Exception:
+            raise InvalidIAEntityUrl(f"{value} is not a valid Instagram Entity URL.")
+
+    @model_validator(mode="before")
+    def derive(self) -> Self:
+        url = urlparse(self.url)
+        if url.path.startswith("/p/"):
+            self.type = EntityType.POST
+            self.id = f"post-{url.path.removeprefix('/p/')}"
+        elif url.path.startswith("/reel/"):
+            self.type = EntityType.REEL
+            self.id = f"reel-{url.path.removeprefix('/reel/')}"
+        else:
+            self.type = EntityType.PROFILE
+            self.id = url.path.removeprefix("/")
+        self.id = self.id.removesuffix("/")
+        return self

@@ -20,3 +20,11 @@ class TelegramBotNotifyChannelEmpty(ValueError):
 
 class IaTelegramBackupNotFound(FileNotFoundError):
     """Exception raised when there is no Insta Automate backup found to restore."""
+
+
+class InvalidIAEntityUrl(ValueError):
+    """Exception raised when a given entity is not a valid Instagram url."""
+
+
+class EntityAccessResolutionError(TimeoutError):
+    """Exception raised when failed to determina access type of a given entity."""
