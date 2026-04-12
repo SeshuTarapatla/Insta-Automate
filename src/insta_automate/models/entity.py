@@ -5,7 +5,7 @@ from urllib.parse import urlparse, urlunparse
 
 from my_modules.datetime_utils import now
 from pydantic import field_validator, model_validator
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, SQLModel, Session, select
 
 from insta_automate.exceptions import InvalidIAEntityUrl
 
@@ -43,7 +43,7 @@ class Entity(SQLModel, table=True):
 
     @field_validator("url")
     @classmethod
-    def is_valid_entity_url(cls, value: str) -> str:
+    def valid_entity_url(cls, value: str) -> str:
         try:
             url = urlparse(value)
             if url.netloc != "www.instagram.com":
@@ -66,3 +66,8 @@ class Entity(SQLModel, table=True):
             self.id = url.path.removeprefix("/")
         self.id = self.id.removesuffix("/")
         return self
+
+    def fetch(self: Self | str, session: Session) -> "Entity | None":
+        url = self.url if isinstance(self, Entity) else self
+        url = Entity.valid_entity_url(url)
+        return session.exec(select(Entity).where(Entity.url == url)).one_or_none()

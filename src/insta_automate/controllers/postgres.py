@@ -42,4 +42,4 @@ engine = IaPostgres().engine
 
 
 def SessionLocal() -> Session:
-    return Session(bind=engine)
+    return Session(bind=engine, expire_on_commit=False)
