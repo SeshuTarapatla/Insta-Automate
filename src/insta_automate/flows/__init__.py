@@ -10,7 +10,7 @@ from prefect.runner.storage import GitRepository
 from prefect.runtime import flow_run
 
 from insta_automate.utils import set_logger_propagation
-from insta_automate.vars import GIT_URL
+from insta_automate.vars import GIT_URL, IA_PREFECT_WORKPOOL
 
 log = get_logger(__name__)
 
@@ -37,4 +37,6 @@ class IaFlows:
             deployment = flow_name.replace("_", "-")
             log.info(f"{flow_path, flow_desc, deployment}")
             _flow = cast(Flow, await handle_await(flow.from_source(src, flow_path)))
-            await handle_await(_flow.deploy(deployment))
+            await handle_await(
+                _flow.deploy(deployment, work_pool_name=IA_PREFECT_WORKPOOL)
+            )

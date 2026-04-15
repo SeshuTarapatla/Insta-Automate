@@ -10,6 +10,7 @@ from insta_automate.vars import (
     IA_ALT_ACCOUNT,
     IA_DATABASE,
     IA_MAIN_ACCOUNT,
+    IA_PREFECT_WORKPOOL,
 )
 
 
@@ -23,6 +24,7 @@ class DockerEnv(BaseModel):
     GIT_URL: str = GIT_URL
     IA_ALT_ACCOUNT: str = IA_ALT_ACCOUNT
     IA_MAIN_ACCOUNT: str = IA_MAIN_ACCOUNT
+    IA_PREFECT_WORKPOOL: str = IA_PREFECT_WORKPOOL
     WINDOWS_HOST: str = get_wsl_host_ip()
 
     def model_dump_env(self) -> list[str]:
