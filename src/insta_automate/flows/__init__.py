@@ -35,8 +35,13 @@ class IaFlows:
             flow_path = f"{base}/{flow_name}.py:{flow_name}"
             flow_desc = flow_.description
             deployment = flow_name.replace("_", "-")
-            log.info(f"{flow_path, flow_desc, deployment}")
             _flow = cast(Flow, await handle_await(flow.from_source(src, flow_path)))
+            log.info(f"Deploying: Deployment(flow='{flow_name}', description='{flow_desc}')")
             await handle_await(
-                _flow.deploy(deployment, work_pool_name=IA_PREFECT_WORKPOOL)
+                _flow.deploy(
+                    deployment,
+                    work_pool_name=IA_PREFECT_WORKPOOL,
+                    ignore_warnings=True,
+                    description=flow_desc,
+                )
             )

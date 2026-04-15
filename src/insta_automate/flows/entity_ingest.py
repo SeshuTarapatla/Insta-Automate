@@ -6,7 +6,9 @@ from insta_automate.controllers.telegram import IaTelegram
 from insta_automate.flows import named_flow
 from insta_automate.tasks.ia import add_new_entity
 
-description: str = "SAMPLE DESCRIPTION"
+description: str = (
+    "A flow that ingests all the entities from Insta Automate Entity channel."
+)
 
 
 @named_flow()
