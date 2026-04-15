@@ -8,6 +8,7 @@ from insta_automate.controllers.docker import IaDocker
 from insta_automate.controllers.postgres import IaPostgres
 from insta_automate.controllers.prefect import Prefect
 from insta_automate.controllers.telegram import IaTelegram
+from insta_automate.flows import IaFlows
 from insta_automate.vars import (
     BANNER,
     IA_IMAGE,
@@ -25,7 +26,9 @@ tl = AsyncTyper(
 db = AsyncTyper(
     name="db", help="Insta Automate database commands.", no_args_is_help=True
 )
-prefect = AsyncTyper(name="prefect", help="Insta Automate Prefect flow scheduler.")
+prefect = AsyncTyper(
+    name="prefect", help="Insta Automate Prefect flow scheduler.", no_args_is_help=True
+)
 [ia.add_typer(subcommand) for subcommand in [tl, db, prefect]]
 
 
@@ -88,3 +91,8 @@ async def db_restore():
 )
 async def prefect_serve():
     await Prefect().serve()
+
+
+@prefect.async_command(name="deploy", help="Deploy all Insta Automate flows.")
+async def prefect_deploy():
+    await IaFlows.deploy_all()
