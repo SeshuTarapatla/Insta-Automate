@@ -48,7 +48,7 @@ class Prefect:
             await self.ping_telegram(0)
 
     async def ping_telegram(self, wait: float = 600):
-        await asyncio.sleep(10 * 60)
+        await asyncio.sleep(wait)
         log.info("Pinging telegram to keep session alive.")
         await self.tl.start()
 
