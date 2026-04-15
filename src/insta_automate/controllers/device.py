@@ -38,7 +38,6 @@ class IaDevice(Device):
         self.ui = IaUI(self)
         self.package = package
         self.unlock()
-        self.start_scrcpy()
 
     def __call__(
         self, resourceId: str | None = None, text: str | None = None, **kwargs
