@@ -1650,7 +1650,7 @@ wheels = [
 [[package]]
 name = "prefect-k3s"
 version = "0.1.0"
-source = { git = "https://github.com/SeshuTarapatla/Prefect-K3s.git#6d1d5847e6a998a62dbeea10040fc309c5f6a455" }
+source = { git = "https://github.com/SeshuTarapatla/Prefect-K3s.git#b7eb4c17cbb1fec691738ff868a06c10209daeee" }
 dependencies = [
     { name = "my-modules" },
     { name = "prefect" },
