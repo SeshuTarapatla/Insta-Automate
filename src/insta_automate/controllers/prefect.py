@@ -102,7 +102,7 @@ class Deployment:
         poll_interval: int = 5,
     ):
         if not concurrent and await self.is_running():
-            print(f"Skipping: '{self._deployment_name}' is already active.")
+            log.warning(f"Skipping: '{self._deployment_name}' is already active.")
             return None
 
         flow_run = cast(
@@ -115,7 +115,7 @@ class Deployment:
             ),
         )
 
-        print(f"Triggered flow run: {flow_run.id}")
+        log.info(f"Triggered flow run: {flow_run.id}")
 
         if wait:
             return await self._wait_for_completion(
@@ -137,7 +137,7 @@ class Deployment:
                 state_type = run.state.type  # type: ignore
 
                 if state_type in Deployment.TERMINAL_STATES:
-                    print(f"Flow run finished with state: {state_type.name}")
+                    log.info(f"Flow run finished with state: {state_type.name}")
                     return run
 
                 await asyncio.sleep(poll_interval)
