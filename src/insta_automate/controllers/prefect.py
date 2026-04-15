@@ -44,9 +44,9 @@ class Prefect:
         self.device.app_restart()
 
     async def entity_ingest_trigger(self):
-        await self.entity_ingest.trigger()
-        log.info("Entity flow run complete. Restarting telegram session.")
-        await self.tl.start()
+        if await self.entity_ingest.trigger():
+            log.info("Pinging telegram to keep session alive.")
+            await self.tl.start()
 
     async def serve(self):
         await self.tl.start()
