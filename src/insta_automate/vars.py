@@ -19,8 +19,10 @@ IA_NOTIFY_CHANNEL: str = "Insta Notify"
 IA_PACKAGE_NAME: str = "com.instagram.android"
 IA_MAIN_ACCOUNT: str = getenv("IA_MAIN_ACCOUNT", "")
 IA_ALT_ACCOUNT: str = getenv("IA_ALT_ACCOUNT", "")
+IA_FLOWS_BASE: str = "src/insta_automate/flows"
 
 WINDOWS_HOST: str = get_wsl_host_ip()
 ANDROID_SERIAL: str = getenv("ANDROID_SERIAL", "")
 ANDROID_PIN: str = getenv("ANDROID_PIN", "")
 ADB_SERVER_SOCKET: str = f"tcp:{WINDOWS_HOST}:5037"
+GIT_URL: str = getenv("GIT_URL", "")

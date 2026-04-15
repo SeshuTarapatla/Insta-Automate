@@ -71,3 +71,4 @@ class Entity(SQLModel, table=True):
         url = self.url if isinstance(self, Entity) else self
         url = Entity.valid_entity_url(url)
         return session.exec(select(Entity).where(Entity.url == url)).one_or_none()
+    
