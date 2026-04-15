@@ -11,7 +11,7 @@ from insta_automate.controllers.telegram import IaTelegram
 from insta_automate.flows import IaFlows
 from insta_automate.vars import (
     BANNER,
-    IA_IMAGE,
+    IA_DOCKER_IMAGE,
 )
 
 log = get_logger(__name__)
@@ -33,7 +33,7 @@ prefect = AsyncTyper(
 
 
 @ia.command(name="build", help="Build [magenta]Insta-Automate[/] docker image.")
-def ia_build(prefix: str = IA_IMAGE):
+def ia_build(prefix: str = IA_DOCKER_IMAGE):
     IaDocker.build(prefix)
 
 
