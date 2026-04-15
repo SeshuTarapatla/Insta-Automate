@@ -109,7 +109,7 @@ class IaDevice(Device):
         self.press("back")
         return True
 
-    def entity_access(self, entity: Entity, timeout: float = 30) -> EntityAccess:
+    def determine_entity_access(self, entity: Entity, timeout: float = 30) -> EntityAccess:
         self.switch_account("alt")
         self.open_url(entity.url)
         match entity.type:

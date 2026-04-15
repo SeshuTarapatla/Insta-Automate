@@ -24,10 +24,10 @@ def add_new_entity(device: IaDevice, url: str) -> Entity:
             log.warning(f"Entity already exists: {_entity.model_dump_json(indent=4)}")
         else:
             switch_account(device, "alt")
-            log.info(f"Entity type is found out to be: {entity.type.upper()}")
+            log.info(f"Entity type is determined to be: {entity.type.upper()}")
             log.info("Determing entity access type...")
-            entity.access = device.entity_access(entity)
-            log.info(f"Entity access type: {entity.access.upper()}")
+            entity.access = device.determine_entity_access(entity)
+            log.info(f"Entity access type id determined to be: {entity.access.upper()}")
             log.info(entity.model_dump_json(indent=4))
             log.info("Adding entry to Entity table.")
             session.add(entity)
