@@ -298,6 +298,12 @@ class IaTelegram(UserTelegramClient):
         async for msg in self.iter_messages_only(self.entity_channel):
             yield msg
 
+    @property
+    async def entities_exist(self) -> bool:
+        async for msg in self.iter_entity_messages():
+            return True
+        return False
+
     @classmethod
     async def get_client(cls) -> "IaTelegram":
         self = cls()

@@ -45,17 +45,27 @@ class Prefect:
 
     async def entity_ingest_trigger(self):
         if await self.entity_ingest.trigger():
-            log.info("Pinging telegram to keep session alive.")
-            await self.tl.start()
+            await self.ping_telegram(0)
+
+    async def ping_telegram(self, wait: float = 600):
+        await asyncio.sleep(10 * 60)
+        log.info("Pinging telegram to keep session alive.")
+        await self.tl.start()
 
     async def serve(self):
         await self.tl.start()
         await self.wait_for_device()
 
+        asyncio.create_task(self.ping_telegram())
+
         @self.tl.on(NewMessage(chats=self.tl.entity_channel))
         async def new_entity_message(event: NewMessage.Event):
             log.info(f"New Entity received: [green]{event.message.text}[/]")
             asyncio.create_task(self.entity_ingest_trigger())
+        
+        if await self.tl.entities_exist:
+             log.info("Stale entities found.")
+             asyncio.create_task(self.entity_ingest_trigger())
 
         log.info("Server started!!")
         await handle_await(self.tl.run_until_disconnected())
