@@ -2,6 +2,7 @@ __all__ = ["adb"]
 
 from pathlib import Path
 from sys import platform
+from time import sleep
 from typing import Literal
 
 from adbutils import AdbClient, adb
@@ -83,6 +84,10 @@ class IaDevice(Device):
         Path(dump_file).write_text(dump, encoding="utf-8")
         return True
 
+    def open_url(self, url: str, wait: float = 1):
+        super().open_url(url)
+        sleep(wait)
+
     def switch_account(self, account: Literal["main", "alt"]) -> bool:
         match account:
             case "main":
@@ -125,6 +130,8 @@ class IaDevice(Device):
         started_at = Timestamp()
         while (Timestamp() - started_at).seconds <= timeout:
             if self.ui.private_account_banner.exists:
+                return EntityAccess.PRIVATE
+            elif self.ui.private_profile_banner.exists:
                 return EntityAccess.PRIVATE
             elif self.ui.profile_tabs_container.exists:
                 return EntityAccess.PUBLIC
@@ -178,6 +185,7 @@ class IaUI:
         self.main_account = self.text(IA_MAIN_ACCOUNT)
         self.post_save_button = self.resourceId("row_feed_button_save")
         self.private_account_banner = self.text("This account is private")
+        self.private_profile_banner = self.text("This profile is private")
         self.profile_tab = self.resourceId("profile_tab")
         self.profile_tabs_container = self.resourceId("profile_tabs_container")
         self.reels_author = self.resourceId("clips_author_username")
