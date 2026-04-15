@@ -55,6 +55,7 @@ class Prefect:
     async def serve(self):
         await self.tl.start()
         await self.wait_for_device()
+        log.info("Insta Automate Scheduler and Trigerrer started!")
 
         asyncio.create_task(self.ping_telegram())
 
@@ -62,12 +63,11 @@ class Prefect:
         async def new_entity_message(event: NewMessage.Event):
             log.info(f"New Entity received: [green]{event.message.text}[/]")
             asyncio.create_task(self.entity_ingest_trigger())
-        
-        if await self.tl.entities_exist:
-             log.info("Stale entities found.")
-             asyncio.create_task(self.entity_ingest_trigger())
 
-        log.info("Server started!!")
+        if await self.tl.entities_exist:
+            log.info("New entities found...")
+            asyncio.create_task(self.entity_ingest_trigger())
+
         await handle_await(self.tl.run_until_disconnected())
 
 
