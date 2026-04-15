@@ -9,9 +9,11 @@ from my_modules.datetime_utils import now
 from my_modules.helpers import handle_await
 from my_modules.logger import get_logger
 from telethon import TelegramClient
+from telethon.hints import EntityLike
 from telethon.sessions import StringSession
 from telethon.tl.custom.dialog import Dialog
 from telethon.tl.functions.channels import CreateChannelRequest, EditAdminRequest
+from telethon.tl.patched import Message as PatchedMessage
 from telethon.types import (
     Channel,
     ChatAdminRights,
@@ -27,6 +29,7 @@ from insta_automate.exceptions import (
     TelegramChannelCreateError,
     TelegramChannelNotFoundError,
 )
+from insta_automate.models.telegram import IaMessages
 from insta_automate.vars import (
     IA_BACKUP_CHANNEL,
     IA_DATABASE,
@@ -148,6 +151,11 @@ class UserTelegramClient(BaseTelegramClient):
             raise TelegramChannelBotAdminError(
                 f"Failed to add @{bot_username} as admin to Channel(title='{channel.title}')"
             ) from e
+
+    async def iter_messages_only(self, entity: EntityLike):
+        async for msg in self.iter_messages(entity):
+            if isinstance(msg, PatchedMessage):
+                yield msg
 
 
 class BotTelegramClient(BaseTelegramClient):
@@ -279,9 +287,16 @@ class IaTelegram(UserTelegramClient):
                 backup_file = Path(str(backup))
                 log.info(f"File downloaded: '{backup_file.as_posix()}'")
                 return backup_file
-        raise IaTelegramBackupNotFound(
-            f"No backup found for {IA_DATABASE} database."
-        )
+        raise IaTelegramBackupNotFound(f"No backup found for {IA_DATABASE} database.")
+
+    async def purge_adb_notifications(self):
+        for text in (IaMessages.DEVICE_CONNECTED, IaMessages.DEVICE_DISCONNECTED):
+            async for msg in self.iter_messages(self.notify_channel, search=text):
+                await self.delete_message(msg)
+
+    async def iter_entity_messages(self):
+        async for msg in self.iter_messages_only(self.entity_channel):
+            yield msg
 
     @classmethod
     async def get_client(cls) -> "IaTelegram":
