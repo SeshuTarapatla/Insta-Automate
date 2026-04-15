@@ -21,13 +21,14 @@ def add_new_entity(device: IaDevice, url: str) -> Entity:
     entity = Entity.model_validate(Entity(url=url))
     with SessionLocal() as session:
         if (_entity := entity.fetch(session)) is not None:
-            log.warning(f"Entity already exists: {_entity.model_dump(mode='json')}")
+            log.warning(f"Entity already exists: {_entity.model_dump_json(indent=4)}")
         else:
             switch_account(device, "alt")
-            log.info(f"Entity type if found out to be: {entity.type.upper()}")
+            log.info(f"Entity type is found out to be: {entity.type.upper()}")
             log.info("Determing entity access type...")
             entity.access = device.entity_access(entity)
-            log.info(entity.model_dump(mode="json"))
+            log.info(f"Entity access type: {entity.access.upper()}")
+            log.info(entity.model_dump_json(indent=4))
             log.info("Adding entry to Entity table.")
             session.add(entity)
             session.commit()
