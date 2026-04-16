@@ -1,17 +1,13 @@
 import asyncio
-from typing import cast
+from inspect import isawaitable
+from typing import Any, cast
 
 from my_modules.helpers import handle_await
 from my_modules.logger import get_logger
-from prefect import get_client
-from prefect.client.schemas.filters import (
-    FlowRunFilter,
-    FlowRunFilterDeploymentId,
-    FlowRunFilterState,
-    FlowRunFilterStateType,
-)
+from prefect import State
 from prefect.client.schemas.objects import FlowRun, StateType
 from prefect.deployments import run_deployment
+from prefect.flow_runs import wait_for_flow_run
 from telethon.events import NewMessage
 from telethon.types import Message
 
@@ -26,6 +22,8 @@ class Prefect:
     def __init__(self) -> None:
         self.tl = IaTelegram()
         self.device_connected: bool = False
+        self.entity_ingest_trigger: bool = False
+
         self.entity_ingest = Deployment("entity-ingest")
 
     async def wait_for_device(self):
@@ -43,9 +41,11 @@ class Prefect:
         self.device = IaDevice()
         self.device.app_restart()
 
-    async def entity_ingest_trigger(self):
-        if await self.entity_ingest.trigger():
-            await self.ping_telegram(0)
+    async def ia_flows_triggers(self):
+        if self.entity_ingest_trigger:
+            log.info("New entities found to ingest.")
+            await self.entity_ingest.trigger()
+            await self.ping_telegram()
 
     async def ping_telegram(self, wait: float = 600):
         await asyncio.sleep(wait)
@@ -57,97 +57,64 @@ class Prefect:
         await self.wait_for_device()
         log.info("Insta Automate Scheduler and Trigerrer started!")
 
+        self.entity_ingest_trigger = await self.tl.entities_exist
+
         asyncio.create_task(self.ping_telegram())
+        asyncio.create_task(self.ia_flows_triggers())
 
         @self.tl.on(NewMessage(chats=self.tl.entity_channel))
         async def new_entity_message(event: NewMessage.Event):
-            log.info(f"New Entity received: [green]{event.message.text}[/]")
-            asyncio.create_task(self.entity_ingest_trigger())
-
-        if await self.tl.entities_exist:
-            log.info("New entities found...")
-            asyncio.create_task(self.entity_ingest_trigger())
+            self.entity_ingest_trigger = True
 
         await handle_await(self.tl.run_until_disconnected())
 
 
 class Deployment:
-    ACTIVE_STATES = [
-        StateType.RUNNING,
-        StateType.PENDING,
-        StateType.SCHEDULED,
-    ]
-
-    TERMINAL_STATES = {
-        StateType.COMPLETED,
-        StateType.FAILED,
-        StateType.CANCELLED,
-        StateType.CRASHED,
-    }
-
-    def __init__(self, flow: str) -> None:
+    def __init__(self, flow: str, deployment: str | None = None) -> None:
         self.flow = flow
-        self._deployment_name = f"{flow}/{flow}"
+        self.deployment = f"{deployment or flow}/{flow}"
 
-    async def is_running(self) -> bool:
-        async with get_client() as client:
-            deployment = await client.read_deployment_by_name(self._deployment_name)
+    def __repr__(self) -> str:
+        return f"Deployment('{self.deployment}')"
 
-            active_runs = await client.read_flow_runs(
-                flow_run_filter=FlowRunFilter(
-                    state=FlowRunFilterState(
-                        type=FlowRunFilterStateType(any_=Deployment.ACTIVE_STATES)
-                    ),
-                    deployment_id=FlowRunFilterDeploymentId(any_=[deployment.id]),
-                ),
-                limit=1,
-            )
+    def __str__(self) -> str:
+        return self.__repr__()
 
-            return len(active_runs) > 0
+    async def log_status(self) -> None:
+        while True:
+            try:
+                self.flow_run = await wait_for_flow_run(self.flow_run.id)
+                if isinstance(self.flow_run.state, State):
+                    if self.flow_run.state.type == StateType.COMPLETED:
+                        log.info(f"{self} run completed.")
+                    else:
+                        log.error(
+                            f"{self} run failed with status: [bold red]{self.flow_run.state.type.value}[/]"
+                        )
+                else:
+                    log.error(f"{self} run completed with UNKNOWN status.")
+                return
+            except Exception:
+                pass
 
     async def trigger(
-        self,
-        concurrent: bool = False,
-        wait: bool = True,
-        poll_interval: int = 5,
-    ):
-        if not concurrent and await self.is_running():
-            log.warning(f"Skipping: '{self._deployment_name}' is already active.")
-            return None
-
-        flow_run = cast(
-            FlowRun,
-            await handle_await(
-                run_deployment(
-                    name=self._deployment_name,
-                    timeout=0,
+        self, wait: bool = True, parameters: dict[str, Any] = {}, retries: int = 3
+    ) -> FlowRun | None:
+        attempt = 1
+        while attempt <= retries:
+            try:
+                log.info(f"Triggering: {self} - attempt {attempt}")
+                flow_run = run_deployment(
+                    self.deployment, timeout=0, parameters=parameters
                 )
-            ),
-        )
-
-        log.info(f"Triggered flow run: {flow_run.id}")
-
-        if wait:
-            return await self._wait_for_completion(
-                flow_run.id,
-                poll_interval,
-            )
-
-        return flow_run
-
-    async def _wait_for_completion(
-        self,
-        flow_run_id,
-        poll_interval: int,
-    ):
-        async with get_client() as client:
-            while True:
-                run = await client.read_flow_run(flow_run_id)
-
-                state_type = run.state.type  # type: ignore
-
-                if state_type in Deployment.TERMINAL_STATES:
-                    log.info(f"Flow run finished with state: {state_type.name}")
-                    return run
-
-                await asyncio.sleep(poll_interval)
+                self.flow_run = await flow_run if isawaitable(flow_run) else flow_run
+                log.info("Trigger successful.")
+                if wait:
+                    await self.log_status()
+                else:
+                    asyncio.create_task(self.log_status())
+                return self.flow_run
+            except Exception:
+                log.error(f"Trigger attempt {attempt} failed. Retrying...")
+                attempt += 1
+        return None
