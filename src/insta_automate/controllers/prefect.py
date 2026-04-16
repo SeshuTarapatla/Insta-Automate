@@ -42,15 +42,20 @@ class Prefect:
         self.device.app_restart()
 
     async def ia_flows_triggers(self):
-        if self.entity_ingest_trigger:
-            log.info("New entities found to ingest.")
-            await self.entity_ingest.trigger()
-            await self.ping_telegram()
+        while True:
+            if self.entity_ingest_trigger:
+                log.info("New entities found to ingest.")
+                await self.entity_ingest.trigger()
+                await self.ping_telegram()
 
-    async def ping_telegram(self, wait: float = 600):
-        await asyncio.sleep(wait)
+    async def ping_telegram(self):
         log.info("Pinging telegram to keep session alive.")
         await self.tl.start()
+    
+    async def keep_telegram_alive(self, wait: float = 600):
+        while True:
+            await asyncio.sleep(wait)
+            await self.ping_telegram()
 
     async def serve(self):
         await self.tl.start()
@@ -59,7 +64,7 @@ class Prefect:
 
         self.entity_ingest_trigger = await self.tl.entities_exist
 
-        asyncio.create_task(self.ping_telegram())
+        asyncio.create_task(self.keep_telegram_alive())
         asyncio.create_task(self.ia_flows_triggers())
 
         @self.tl.on(NewMessage(chats=self.tl.entity_channel))
