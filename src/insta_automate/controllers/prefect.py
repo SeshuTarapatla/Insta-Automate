@@ -87,23 +87,6 @@ class Deployment:
     def __str__(self) -> str:
         return self.__repr__()
 
-    async def log_status(self) -> None:
-        while True:
-            try:
-                self.flow_run = await wait_for_flow_run(self.flow_run.id)
-                if isinstance(self.flow_run.state, State):
-                    if self.flow_run.state.type == StateType.COMPLETED:
-                        log.info(f"{self} run completed.")
-                    else:
-                        log.error(
-                            f"{self} run failed with status: [bold red]{self.flow_run.state.type.value}[/]"
-                        )
-                else:
-                    log.error(f"{self} run completed with UNKNOWN status.")
-                return
-            except Exception:
-                pass
-
     async def trigger(
         self, wait: bool = True, parameters: dict[str, Any] = {}, retries: int = 3
     ) -> FlowRun | None:
@@ -125,3 +108,20 @@ class Deployment:
                 log.error(f"Trigger attempt {attempt} failed. Retrying...")
                 attempt += 1
         return None
+
+    async def log_status(self) -> None:
+        while True:
+            try:
+                self.flow_run = await wait_for_flow_run(self.flow_run.id)
+                if isinstance(self.flow_run.state, State):
+                    if self.flow_run.state.type == StateType.COMPLETED:
+                        log.info(f"{self} run completed.")
+                    else:
+                        log.error(
+                            f"{self} run failed with status: [bold red]{self.flow_run.state.type.value}[/]"
+                        )
+                else:
+                    log.error(f"{self} run completed with UNKNOWN status.")
+                return
+            except Exception:
+                pass

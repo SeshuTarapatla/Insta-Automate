@@ -4,6 +4,7 @@ from pydantic import ValidationError
 from insta_automate.controllers.device import IaDevice
 from insta_automate.controllers.telegram import IaTelegram
 from insta_automate.flows import named_flow
+from insta_automate.tasks.db import db_backup
 from insta_automate.tasks.ia import add_new_entity
 
 description: str = (
@@ -23,3 +24,5 @@ async def entity_ingest():
         except ValidationError:
             log.error(f"Message(text='{msg.text}') is not a valid entity url.")
         await tl.delete_message(msg)
+    await db_backup()
+
