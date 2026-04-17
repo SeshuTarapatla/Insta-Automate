@@ -1,15 +1,17 @@
 __all__ = ["adb"]
 
+from functools import wraps
 from pathlib import Path
 from sys import platform
 from time import sleep
-from typing import Literal
+from typing import Callable, Literal, ParamSpec, TypeVar
 
 from adbutils import AdbClient, adb
 from my_modules.datetime_utils import Timestamp
 from my_modules.logger import get_logger
 from uiautomator2 import Device
 from uiautomator2._selector import UiObject
+from wsl_bridge.scrcpy import ScrcpyClient
 
 from insta_automate.exceptions import EntityAccessResolutionError
 from insta_automate.models.entity import Entity, EntityAccess, EntityType
@@ -21,10 +23,12 @@ from insta_automate.vars import (
     IA_PACKAGE_NAME,
     WINDOWS_HOST,
 )
-from wsl_bridge.scrcpy import ScrcpyClient
 
 adb = adb if platform == "win32" else AdbClient(WINDOWS_HOST, 5037)
 log = get_logger(__name__)
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
 class IaDevice(Device):
@@ -46,6 +50,20 @@ class IaDevice(Device):
         kwargs["text"] = text
         kwargs = {key: value for key, value in kwargs.items() if value}
         return super().__call__(**kwargs)
+
+    @staticmethod
+    def ui_retry(method: Callable[P, R]) -> Callable[P, R]:
+        @wraps(method)
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+            self: IaDevice = args[0]  # type: ignore[assignment]
+            try:
+                return method(*args, **kwargs)
+            except Exception:
+                log.error(f"UI Exception occurred for: {method}")
+                self.app_restart()
+                return method(*args, **kwargs)
+
+        return wrapper
 
     def start_scrcpy(self):
         try:
@@ -89,6 +107,7 @@ class IaDevice(Device):
         super().open_url(url)
         sleep(wait)
 
+    @ui_retry
     def switch_account(self, account: Literal["main", "alt"]) -> bool:
         match account:
             case "main":

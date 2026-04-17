@@ -47,6 +47,7 @@ class Prefect:
                 log.info("New entities found to ingest.")
                 await self.entity_ingest.trigger()
                 await self.ping_telegram()
+                self.entity_ingest_trigger = False
             await asyncio.sleep(10)
 
     async def ping_telegram(self):
