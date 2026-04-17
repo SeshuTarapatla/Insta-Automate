@@ -2915,7 +2915,7 @@ wheels = [
 [[package]]
 name = "wsl-bridge"
 version = "0.1.0"
-source = { git = "https://github.com/SeshuTarapatla/wsl-bridge.git#fba9a5992e17070da5cdbbbcff96c8b543cc75cc" }
+source = { git = "https://github.com/SeshuTarapatla/wsl-bridge.git#4d176fa9bd5c4b7f589a7f5e1dd45a2e69401ba3" }
 dependencies = [
     { name = "fastapi" },
     { name = "httpx" },

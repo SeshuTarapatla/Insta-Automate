@@ -21,9 +21,8 @@ log = get_logger(__name__)
 class Prefect:
     def __init__(self) -> None:
         self.tl = IaTelegram()
-        self.device_connected: bool = False
         self.entity_ingest_trigger: bool = False
-
+        self.device: IaDevice = cast(IaDevice, None)
         self.entity_ingest = Deployment("entity-ingest")
 
     async def wait_for_device(self):
@@ -33,13 +32,14 @@ class Prefect:
                 log.error(IaMessages.DEVICE_DISCONNECTED)
                 notification = await self.tl.bot.notify(IaMessages.DEVICE_DISCONNECTED)
             await asyncio.sleep(1)
-        self.device_connected = True
         log.info(IaMessages.DEVICE_CONNECTED)
         if notification is not None:
             await self.tl.bot.notify(IaMessages.DEVICE_CONNECTED, transient=True)
             await self.tl.purge_adb_notifications()
-        self.device = IaDevice()
-        self.device.app_restart()
+        self.device = self.device or IaDevice()
+        self.device.start_scrcpy()
+        self.device.unlock()
+        self.device.app_start()
 
     async def ia_flows_triggers(self):
         while True:
@@ -52,7 +52,7 @@ class Prefect:
     async def ping_telegram(self):
         log.info("Pinging telegram to keep session alive.")
         await self.tl.start()
-    
+
     async def keep_telegram_alive(self, wait: float = 600):
         while True:
             await asyncio.sleep(wait)

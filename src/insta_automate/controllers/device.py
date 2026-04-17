@@ -8,7 +8,6 @@ from typing import Literal
 from adbutils import AdbClient, adb
 from my_modules.datetime_utils import Timestamp
 from my_modules.logger import get_logger
-from my_modules.scrcpy import Scrcpy
 from uiautomator2 import Device
 from uiautomator2._selector import UiObject
 
@@ -22,6 +21,7 @@ from insta_automate.vars import (
     IA_PACKAGE_NAME,
     WINDOWS_HOST,
 )
+from wsl_bridge.scrcpy import ScrcpyClient
 
 adb = adb if platform == "win32" else AdbClient(WINDOWS_HOST, 5037)
 log = get_logger(__name__)
@@ -38,7 +38,6 @@ class IaDevice(Device):
         self.pin = pin
         self.ui = IaUI(self)
         self.package = package
-        self.unlock()
 
     def __call__(
         self, resourceId: str | None = None, text: str | None = None, **kwargs
@@ -49,10 +48,12 @@ class IaDevice(Device):
         return super().__call__(**kwargs)
 
     def start_scrcpy(self):
-        if platform != "win32":
-            return
-        self.scrcpy = Scrcpy(self.serial)
-        self.scrcpy.start()
+        try:
+            if not ScrcpyClient.status():
+                log.info(f"Starting scrcpy session for Device({self.serial})")
+                ScrcpyClient.start(self.serial)
+        except Exception:
+            log.error("Failed to start scrcpy session. [bold red]Service 404[/].")
 
     def unlock(self):
         if not self.locked:
@@ -109,7 +110,9 @@ class IaDevice(Device):
         self.press("back")
         return True
 
-    def determine_entity_access(self, entity: Entity, timeout: float = 30) -> EntityAccess:
+    def determine_entity_access(
+        self, entity: Entity, timeout: float = 30
+    ) -> EntityAccess:
         self.switch_account("alt")
         self.open_url(entity.url)
         match entity.type:
