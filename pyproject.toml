@@ -16,6 +16,7 @@ dependencies = [
     "sqlmodel>=0.0.38",
     "telethon>=1.42.0",
     "uiautomator2>=3.5.0",
+    "wsl-bridge",
 ]
 
 [project.scripts]
@@ -30,6 +31,7 @@ build-backend = "uv_build"
 my-modules = { git = "https://github.com/SeshuTarapatla/my-modules.git" }
 prefect-k3s = { git = "https://github.com/SeshuTarapatla/Prefect-K3s.git" }
 tg-auth = { git = "https://github.com/SeshuTarapatla/TG-Auth.git" }
+wsl-bridge = { git = "https://github.com/SeshuTarapatla/wsl-bridge.git" }
 
 [dependency-groups]
 dev = [
