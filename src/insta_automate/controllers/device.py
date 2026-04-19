@@ -9,12 +9,16 @@ from typing import Callable, Literal, ParamSpec, TypeVar
 from adbutils import AdbClient, adb
 from my_modules.datetime_utils import Timestamp
 from my_modules.logger import get_logger
+from retry import retry
 from uiautomator2 import Device
 from uiautomator2._selector import UiObject
 from wsl_bridge.scrcpy import ScrcpyClient
 
+from insta_automate.controllers.internet import Internet
 from insta_automate.exceptions import EntityAccessResolutionError
-from insta_automate.models.entity import Entity, EntityAccess, EntityType
+from insta_automate.models.entity import Entity, EntityAccess
+from insta_automate.models.meta import EntityType
+from insta_automate.utils import handle_async
 from insta_automate.vars import (
     ANDROID_PIN,
     ANDROID_SERIAL,
@@ -42,7 +46,13 @@ class IaDevice(Device):
         self.pin = pin
         self.ui = IaUI(self)
         self.package = package
+        self.current_user: Literal["main", "alt"] = "alt"
+        self.inet = Internet()
 
+    def _wait_for_network(self):
+        return handle_async(self.inet.verify_network)
+
+    @retry(tries=3, delay=5)
     def __call__(
         self, resourceId: str | None = None, text: str | None = None, **kwargs
     ) -> UiObject:
@@ -104,15 +114,25 @@ class IaDevice(Device):
         return True
 
     def open_url(self, url: str, wait: float = 1):
+        self._wait_for_network()
         super().open_url(url)
         sleep(wait)
 
+    def swipe_list(self, elements: list[UiObject], duration: float = 1):
+        if len(elements) > 1:
+            return self.swipe(
+                *elements[-1].center(), *elements[0].center(), duration=duration
+            )
+
     @ui_retry
     def switch_account(self, account: Literal["main", "alt"]) -> bool:
+        self._wait_for_network()
         match account:
             case "main":
+                self.current_user = "main"
                 switch = self.ui.main_account.click
             case "alt":
+                self.current_user = "alt"
                 switch = self.ui.alt_account.click
             case _:
                 raise ValueError(
@@ -127,11 +147,13 @@ class IaDevice(Device):
         self.ui.profile_tab.long_click()
         switch()
         self.press("back")
+        self.sleep(1)
         return True
 
     def determine_entity_access(
         self, entity: Entity, timeout: float = 30
     ) -> EntityAccess:
+        self._wait_for_network()
         self.switch_account("alt")
         self.open_url(entity.url)
         match entity.type:
@@ -150,6 +172,7 @@ class IaDevice(Device):
 
     def _profile_entity_access(self, timeout: float = 30) -> EntityAccess | None:
         started_at = Timestamp()
+        self._wait_for_network()
         while (Timestamp() - started_at).seconds <= timeout:
             if self.ui.private_account_banner.exists:
                 return EntityAccess.PRIVATE
@@ -160,6 +183,7 @@ class IaDevice(Device):
 
     def _post_entity_access(self, timeout: float = 30) -> EntityAccess | None:
         started_at = Timestamp()
+        self._wait_for_network()
         while (Timestamp() - started_at).seconds <= timeout:
             if self.ui.private_account_banner.exists:
                 return EntityAccess.PRIVATE
@@ -174,7 +198,8 @@ class IaDevice(Device):
             return self(
                 resourceId="com.instagram.android:id/clips_author_username"
             ).get_text()
-
+        
+        self._wait_for_network()
         author1 = _reel_author()
         self.open_url(url)
         author2 = _reel_author()
@@ -202,21 +227,38 @@ class IaUI:
         self.pin_enter = self.resourceId("key_enter", "system")
 
         # app
+        self.action_bar_title = self.resourceId("action_bar_title")
         self.alt_account = self.text(IA_ALT_ACCOUNT)
         self.back_button = self.content("Back")
+        self.follower_container = self.resourceId("follow_list_container")
+        self.follower_container_id = self.resourceId("follow_list_username")
+        self.follower_container_loader = self.resourceId("row_load_more_button")
         self.main_account = self.text(IA_MAIN_ACCOUNT)
         self.post_save_button = self.resourceId("row_feed_button_save")
         self.private_account_banner = self.text("This account is private")
         self.private_profile_banner = self.text("This profile is private")
+        self.profile_bio = self.resourceId("profile_user_info_compose_view").child(
+            className="android.widget.TextView"
+        )
+        self.profile_followers = self.resourceId(
+            "profile_header_familiar_followers_value"
+        )
+        self.profile_following = self.resourceId(
+            "profile_header_familiar_following_value"
+        )
+        self.profile_id = self.action_bar_title
+        self.profile_name = self.resourceId("profile_header_full_name_above_vanity")
+        self.profile_posts = self.resourceId("profile_header_familiar_post_count_value")
         self.profile_tab = self.resourceId("profile_tab")
         self.profile_tabs_container = self.resourceId("profile_tabs_container")
         self.reels_author = self.resourceId("clips_author_username")
+        self.suggested_for_you = self.text("Suggested for you")
 
     def pin_digit(self, digit: int | str) -> UiObject:
         return self.device(self._resourceId("vivo_digit_text", "system"), str(digit))
 
+    @staticmethod
     def _resourceId(
-        self,
         key: str,
         app: Literal["system", "vivo", "instagram"] = "instagram",
     ) -> str:
@@ -239,3 +281,8 @@ class IaUI:
 
     def content(self, description: str) -> UiObject:
         return self.device(description=description)
+
+    @staticmethod
+    def height(ui_object: UiObject) -> int:
+        _, y1, _, y2 = ui_object.bounds()
+        return y2 - y1
