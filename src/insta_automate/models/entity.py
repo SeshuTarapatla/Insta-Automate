@@ -1,31 +1,15 @@
 from datetime import datetime
-from enum import StrEnum, auto
 from typing import Self
 from urllib.parse import urlparse, urlunparse
 
 from my_modules.datetime_utils import now
 from pydantic import field_validator, model_validator
-from sqlmodel import Field, Session, SQLModel, select
+from sqlalchemy import func
+from sqlmodel import Field, Session, SQLModel, case, select
 
 from insta_automate.exceptions import InvalidIAEntityUrl
-
-
-class EntityType(StrEnum):
-    POST = auto()
-    PROFILE = auto()
-    REEL = auto()
-
-
-class EntityAccess(StrEnum):
-    PUBLIC = auto()
-    PRIVATE = auto()
-
-
-class EntityStatus(StrEnum):
-    QUEUED = auto()
-    SCANNING = auto()
-    FAILED = auto()
-    COMPLETED = auto()
+from insta_automate.models.meta import EntityAccess, EntityStatus, EntityType
+from insta_automate.models.scanned import Scanned
 
 
 class Entity(SQLModel, table=True):
@@ -73,6 +57,38 @@ class Entity(SQLModel, table=True):
         url = Entity.valid_entity_url(url)
         return session.exec(select(Entity).where(Entity.url == url)).one_or_none()
 
+    def update(self, session: Session) -> "Entity":
+        self.scanned = session.exec(
+            select(func.count()).where(Scanned.root == self.id)
+        ).one()
+        session.merge(self)
+        session.commit()
+        return self
+
     @classmethod
     def from_url(cls, url: str):
         return cls.model_validate(cls(url=url))
+
+    @classmethod
+    def entity_priority_order(cls):
+        return (
+            case(
+                (cls.access == EntityAccess.PRIVATE, 2),
+                (cls.access == EntityAccess.PUBLIC, 1),
+            ),
+            case(
+                (cls.type == EntityType.PROFILE, 0),
+                (cls.type == EntityType.REEL, 1),
+                (cls.type == EntityType.POST, 2),
+            ),
+        )
+
+    @classmethod
+    def fetch_queued_entities(cls, session: Session) -> list["Entity"]:
+        return list(
+            session.exec(
+                select(cls)
+                .where(cls.status == EntityStatus.QUEUED)
+                .order_by(*cls.entity_priority_order())
+            ).all()
+        )
