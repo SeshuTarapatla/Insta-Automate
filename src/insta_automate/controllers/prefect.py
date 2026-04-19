@@ -45,6 +45,7 @@ class Prefect:
         while True:
             if self.entity_ingest_trigger:
                 log.info("New entities found to ingest.")
+                await self.wait_for_device()
                 await self.entity_ingest.trigger()
                 await self.ping_telegram()
                 self.entity_ingest_trigger = False
