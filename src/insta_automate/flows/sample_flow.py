@@ -1,10 +1,10 @@
+"""Sample flow to test Prefect functionality."""
+
 import asyncio
 
 from prefect import get_run_logger
 
 from insta_automate.flows import named_flow
-
-description: str = "Sample flow to test Prefect functionality."
 
 
 @named_flow()

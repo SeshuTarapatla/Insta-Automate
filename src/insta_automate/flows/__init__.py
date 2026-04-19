@@ -18,10 +18,18 @@ log = get_logger(__name__)
 def named_flow(
     *args,
     flow_run_name=lambda: f"{flow_run.flow_name}-{Timestamp().strftime('hyphen')}",
+    retries: int | None = 3,
+    retry_delay_seconds: int | None = 30,
     **kwargs,
 ):
     set_logger_propagation()
-    return flow(*args, flow_run_name=flow_run_name, **kwargs)
+    return flow(
+        *args,
+        flow_run_name=flow_run_name,
+        retries=retries,
+        retry_delay_seconds=retry_delay_seconds,
+        **kwargs,
+    )
 
 
 class IaFlows:
@@ -33,10 +41,14 @@ class IaFlows:
             flow_name = module.name
             flow_ = import_module(f"{__name__}.{flow_name}")
             flow_path = f"{base}/{flow_name}.py:{flow_name}"
-            flow_desc = flow_.description
+            flow_desc = (
+                doc.strip() if (doc := flow_.__doc__) else "No description added."
+            )
             deployment = flow_name.replace("_", "-")
             _flow = cast(Flow, await handle_await(flow.from_source(src, flow_path)))
-            log.info(f"Deploying: Deployment(flow='{flow_name}', description='{flow_desc}')")
+            log.info(
+                f"Deploying: Deployment(flow='{flow_name}', description='{flow_desc}')"
+            )
             await handle_await(
                 _flow.deploy(
                     deployment,

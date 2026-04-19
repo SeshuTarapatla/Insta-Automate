@@ -1,3 +1,5 @@
+"""A flow that ingests all the entities from Insta Automate Entity channel."""
+
 from prefect import get_run_logger
 from pydantic import ValidationError
 
@@ -6,10 +8,6 @@ from insta_automate.controllers.telegram import IaTelegram
 from insta_automate.flows import named_flow
 from insta_automate.tasks.db import db_backup
 from insta_automate.tasks.ia import add_new_entity
-
-description: str = (
-    "A flow that ingests all the entities from Insta Automate Entity channel."
-)
 
 
 @named_flow()
@@ -25,4 +23,3 @@ async def entity_ingest():
             log.error(f"Message(text='{msg.text}') is not a valid entity url.")
         await tl.delete_message(msg)
     await db_backup()
-
