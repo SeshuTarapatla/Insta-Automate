@@ -21,6 +21,7 @@ from telethon.types import (
     Updates,
 )
 
+from insta_automate.controllers.internet import Internet
 from insta_automate.exceptions import (
     IaTelegramBackupNotFound,
     TelegramAuthEnvironmentError,
@@ -49,6 +50,7 @@ class BaseTelegramClient(TelegramClient):
     ) -> None:
         session = StringSession(session) if isinstance(session, str) else session
         api_id = int(api_id)
+        self.inet = Internet()
         super().__init__(session=session, api_id=api_id, api_hash=api_hash)
 
     async def delete_message(self, message: Message, delay: float = 0):
@@ -250,6 +252,7 @@ class IaTelegram(UserTelegramClient):
         return await super().start(timeout=timeout)
 
     async def start(self, timeout: float = 2, channels: bool = True):
+        await self.inet.verify_network()
         await self.start_(timeout=timeout)
         await self.channels_init() if channels else None
         await self.bot.start(timeout=timeout)
@@ -274,6 +277,7 @@ class IaTelegram(UserTelegramClient):
         log.info(
             f"Uploading '{file.name}' to [bold magenta]{IA_BACKUP_CHANNEL}[/] channel."
         )
+        await self.inet.verify_network()
         await self.send_file(self.backup_channel, file=file.as_posix())
         log.info("Upload complete. Backup [bold green]successful[/].")
 
