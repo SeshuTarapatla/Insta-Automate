@@ -26,6 +26,7 @@ class DockerEnv(BaseModel):
     IA_MAIN_ACCOUNT: str = IA_MAIN_ACCOUNT
     IA_PREFECT_WORKPOOL: str = IA_PREFECT_WORKPOOL
     WINDOWS_HOST: str = get_wsl_host_ip()
+    TZ: str = "Asia/Kolkata"
 
     def model_dump_env(self) -> list[str]:
         return [f"ENV {key}='{value}'" for key, value in self.model_dump().items()]

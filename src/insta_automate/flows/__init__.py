@@ -1,3 +1,4 @@
+import asyncio
 from importlib import import_module
 from pkgutil import iter_modules
 from typing import cast
@@ -49,11 +50,19 @@ class IaFlows:
             log.info(
                 f"Deploying: Deployment(flow='{flow_name}', description='{flow_desc}')"
             )
-            await handle_await(
-                _flow.deploy(
-                    deployment,
-                    work_pool_name=IA_PREFECT_WORKPOOL,
-                    ignore_warnings=True,
-                    description=flow_desc,
-                )
-            )
+            while True:
+                try:
+                    await handle_await(
+                        _flow.deploy(
+                            deployment,
+                            work_pool_name=IA_PREFECT_WORKPOOL,
+                            ignore_warnings=True,
+                            description=flow_desc,
+                        )
+                    )
+                    break
+                except Exception:
+                    log.error(
+                        f"Failed to deploy: '{flow_name}'. Retrying with delay..."
+                    )
+                    await asyncio.sleep(5)
