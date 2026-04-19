@@ -77,9 +77,8 @@ class IaDevice(Device):
 
     def start_scrcpy(self):
         try:
-            if not ScrcpyClient.status():
-                log.info(f"Starting scrcpy session for Device({self.serial})")
-                ScrcpyClient.start(self.serial)
+            log.info(f"Starting scrcpy session for Device({self.serial})")
+            ScrcpyClient.start(self.serial)
         except Exception:
             log.error("Failed to start scrcpy session. [bold red]Service 404[/].")
 
