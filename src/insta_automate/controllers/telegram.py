@@ -7,6 +7,7 @@ from typing import Any, AsyncIterable, Literal, overload
 from dotenv import load_dotenv
 from my_modules.datetime_utils import now
 from my_modules.helpers import handle_await
+from my_modules.inet import Internet
 from my_modules.logger import get_logger
 from telethon import TelegramClient
 from telethon.hints import EntityLike
@@ -21,7 +22,6 @@ from telethon.types import (
     Updates,
 )
 
-from insta_automate.controllers.internet import Internet
 from insta_automate.exceptions import (
     IaTelegramBackupNotFound,
     TelegramAuthEnvironmentError,
@@ -252,7 +252,7 @@ class IaTelegram(UserTelegramClient):
         return await super().start(timeout=timeout)
 
     async def start(self, timeout: float = 2, channels: bool = True):
-        await self.inet.verify_network()
+        self.inet.wait_for_network()
         await self.start_(timeout=timeout)
         await self.channels_init() if channels else None
         await self.bot.start(timeout=timeout)
@@ -277,7 +277,7 @@ class IaTelegram(UserTelegramClient):
         log.info(
             f"Uploading '{file.name}' to [bold magenta]{IA_BACKUP_CHANNEL}[/] channel."
         )
-        await self.inet.verify_network()
+        self.inet.wait_for_network()
         await self.send_file(self.backup_channel, file=file.as_posix())
         log.info("Upload complete. Backup [bold green]successful[/].")
 
