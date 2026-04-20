@@ -138,7 +138,7 @@ def profile_entity_scan(
                 jpeg = scanned_dir / f"{current}.jpg"
                 element.screenshot().save(jpeg)
                 log.info(
-                    f"[{added}/{scanned}] @{current} | Screenshot exported to: {jpeg.relative_to(IA_DIR)}"
+                    f"[{added}/{scanned}] @{current} | Exported to: {jpeg.relative_to(IA_DIR)}"
                 )
         entity.update(session)
         device._wait_for_network()
