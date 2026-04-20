@@ -4,10 +4,10 @@ import asyncio
 
 from prefect import get_run_logger
 
-from insta_automate.flows import named_flow
+from insta_automate.flows import ia_flow
 
 
-@named_flow()
+@ia_flow()
 async def sample_flow(wait: float = 60):
     log = get_run_logger()
     log.info(f"Await for {wait} seconds.")

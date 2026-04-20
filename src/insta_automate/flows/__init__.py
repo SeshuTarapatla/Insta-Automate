@@ -16,7 +16,7 @@ from insta_automate.vars import GIT_URL, IA_PREFECT_WORKPOOL
 log = get_logger(__name__)
 
 
-def named_flow(
+def ia_flow(
     *args,
     flow_run_name=lambda: f"{flow_run.flow_name}-{Timestamp().strftime('hyphen')}",
     retries: int | None = 3,

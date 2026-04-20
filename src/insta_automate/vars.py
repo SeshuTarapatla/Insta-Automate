@@ -23,7 +23,8 @@ IA_PACKAGE_NAME: str = "com.instagram.android"
 IA_PREFECT_WORKPOOL: str = "insta-automate-pool"
 
 WINDOWS_HOST: str = get_wsl_host_ip()
-ANDROID_SERIAL: str = getenv("ANDROID_SERIAL", "")
-ANDROID_PIN: str = getenv("ANDROID_PIN", "")
 ADB_SERVER_SOCKET: str = f"tcp:{WINDOWS_HOST}:5037"
+ANDROID_PIN: str = getenv("ANDROID_PIN", "")
+ANDROID_SERIAL: str = getenv("ANDROID_SERIAL", "")
 GIT_URL: str = getenv("GIT_URL", "")
+SAVE_DIR: Path = Path("~/Pictures/insta-automate").expanduser()
