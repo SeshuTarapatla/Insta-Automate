@@ -1,4 +1,4 @@
-"""A flow that scans for user from the given Insta Automate Entity."""
+"""A flow that scans for user from the given Insta Automate Entity URL."""
 
 from prefect import get_run_logger
 

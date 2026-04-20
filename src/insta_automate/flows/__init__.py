@@ -58,6 +58,7 @@ class IaFlows:
                             work_pool_name=IA_PREFECT_WORKPOOL,
                             ignore_warnings=True,
                             description=flow_desc,
+                            concurrency_limit=1,
                         )
                     )
                     break
