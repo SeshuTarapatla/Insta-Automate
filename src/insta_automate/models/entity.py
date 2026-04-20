@@ -7,7 +7,7 @@ from pydantic import field_validator, model_validator
 from sqlalchemy import func
 from sqlmodel import Field, Session, SQLModel, case, select
 
-from insta_automate.exceptions import InvalidIAEntityUrl
+from insta_automate.exceptions import InvalidEntityUrl
 from insta_automate.models.meta import EntityAccess, EntityStatus, EntityType
 from insta_automate.models.scanned import Scanned
 
@@ -32,10 +32,10 @@ class Entity(SQLModel, table=True):
             value = value.replace("/profilecard", "")
             url = urlparse(value)
             if url.netloc != "www.instagram.com":
-                raise InvalidIAEntityUrl
+                raise InvalidEntityUrl
             return urlunparse(url._replace(query="")).removesuffix("/")
         except Exception:
-            raise InvalidIAEntityUrl(f"{value} is not a valid Instagram Entity URL.")
+            raise InvalidEntityUrl(f"{value} is not a valid Instagram Entity URL.")
 
     @model_validator(mode="before")
     def derive(self) -> Self:
@@ -81,6 +81,10 @@ class Entity(SQLModel, table=True):
                 (cls.type == EntityType.REEL, 1),
                 (cls.type == EntityType.POST, 2),
             ),
+            case(
+                (cls.status == EntityStatus.SCANNING, 0),
+                (cls.status == EntityStatus.QUEUED, 1),
+            ),
         )
 
     @classmethod
@@ -88,7 +92,10 @@ class Entity(SQLModel, table=True):
         return list(
             session.exec(
                 select(cls)
-                .where(cls.status == EntityStatus.QUEUED)
+                .where(
+                    (cls.status == EntityStatus.SCANNING)
+                    | (cls.status == EntityStatus.QUEUED)
+                )
                 .order_by(*cls.entity_priority_order())
             ).all()
         )

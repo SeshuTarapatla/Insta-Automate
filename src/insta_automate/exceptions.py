@@ -22,8 +22,12 @@ class IaTelegramBackupNotFound(FileNotFoundError):
     """Exception raised when there is no Insta Automate backup found to restore."""
 
 
-class InvalidIAEntityUrl(ValueError):
+class InvalidEntityUrl(ValueError):
     """Exception raised when a given entity is not a valid Instagram url."""
+
+
+class InvalidEntity(RuntimeError):
+    """Exception raised when an invalid entity object is passed to the tasks."""
 
 
 class EntityAccessResolutionError(TimeoutError):
