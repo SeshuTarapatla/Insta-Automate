@@ -11,6 +11,7 @@ dependencies = [
     "adbutils>=2.12.0",
     "async-typer>=0.1.10",
     "my-modules",
+    "pillow>=12.2.0",
     "prefect-k3s",
     "python-dotenv>=1.2.2",
     "sqlmodel>=0.0.38",

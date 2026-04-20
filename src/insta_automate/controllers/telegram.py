@@ -2,7 +2,7 @@ import asyncio
 from asyncio import wait_for
 from os import getenv
 from pathlib import Path
-from typing import Any, AsyncIterable, Literal, overload
+from typing import Any, AsyncIterable, Literal, Sequence, cast, overload
 
 from dotenv import load_dotenv
 from my_modules.datetime_utils import now
@@ -10,7 +10,7 @@ from my_modules.helpers import handle_await
 from my_modules.inet import Internet
 from my_modules.logger import get_logger
 from telethon import TelegramClient
-from telethon.hints import EntityLike
+from telethon.hints import EntityLike, FileLike
 from telethon.sessions import StringSession
 from telethon.tl.custom.dialog import Dialog
 from telethon.tl.functions.channels import CreateChannelRequest, EditAdminRequest
@@ -181,21 +181,30 @@ class BotTelegramClient(BaseTelegramClient):
             return None
 
     @overload
-    async def notify(self, message: str, transient: Literal[True]) -> None: ...
+    async def notify(
+        self,
+        message: str,
+        transient: Literal[True],
+        file: FileLike | Sequence[FileLike] = cast(FileLike, None),
+    ) -> None: ...
 
     @overload
     async def notify(
-        self, message: str, transient: Literal[False] = False
+        self,
+        message: str,
+        transient: Literal[False] = False,
+        file: FileLike | Sequence[FileLike] = cast(FileLike, None),
     ) -> Message: ...
 
     async def notify(
         self,
         message: str,
         transient: bool = False,
+        file: FileLike | Sequence[FileLike] = cast(FileLike, None),
     ) -> Message | None:
         if self.notify_channel_id:
             notification = await self.send_message(
-                self.notify_channel_id, message=message
+                self.notify_channel_id, message=message, file=file
             )
             if transient:
                 asyncio.create_task(self.delete_message(notification, delay=5))

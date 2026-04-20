@@ -3,6 +3,7 @@ from inspect import isawaitable
 from typing import Any, cast
 
 from my_modules.helpers import handle_await
+from my_modules.inet import Internet
 from my_modules.logger import get_logger
 from prefect import State
 from prefect.client.schemas.objects import FlowRun, StateType
@@ -12,7 +13,9 @@ from telethon.events import NewMessage
 from telethon.types import Message
 
 from insta_automate.controllers.device import IaDevice
+from insta_automate.controllers.postgres import SessionLocal
 from insta_automate.controllers.telegram import IaTelegram
+from insta_automate.models.entity import Entity
 from insta_automate.models.telegram import IaMessages
 
 log = get_logger(__name__)
@@ -24,6 +27,9 @@ class Prefect:
         self.entity_ingest_trigger: bool = False
         self.device: IaDevice = cast(IaDevice, None)
         self.entity_ingest = Deployment("entity-ingest")
+        self.entity_scan = Deployment("entity-scan")
+        self.session = SessionLocal()
+        self.inet = Internet()
 
     async def wait_for_device(self):
         notification: Message = cast(Message, None)
@@ -45,10 +51,16 @@ class Prefect:
         while True:
             if self.entity_ingest_trigger:
                 log.info("New entities found to ingest.")
-                await self.wait_for_device()
+                self.inet.wait_for_network()
                 await self.entity_ingest.trigger()
                 await self.ping_telegram()
                 self.entity_ingest_trigger = False
+            if entities := Entity.fetch_queued_entities(self.session):
+                log.info(f"Total entities queued for scan: {len(entities)}")
+                log.info(f"Trigerring scan for {repr(entities[0])}")
+                self.inet.wait_for_network()
+                await self.wait_for_device()
+                await self.entity_scan.trigger(parameters={"url": entities[0].url})
             await asyncio.sleep(10)
 
     async def ping_telegram(self):

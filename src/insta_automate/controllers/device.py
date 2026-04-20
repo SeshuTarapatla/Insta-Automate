@@ -1,11 +1,13 @@
 __all__ = ["adb"]
 
 from functools import wraps
+from io import BytesIO
 from pathlib import Path
 from sys import platform
 from time import sleep
 from typing import Callable, Literal, ParamSpec, TypeVar
 
+from PIL.Image import Image
 from adbutils import AdbClient, adb
 from my_modules.datetime_utils import Timestamp
 from my_modules.inet import Internet
@@ -55,6 +57,8 @@ class IaDevice(Device):
     def __call__(
         self, resourceId: str | None = None, text: str | None = None, **kwargs
     ) -> UiObject:
+        if resourceId and not resourceId.startswith("com"):
+            resourceId = self.ui._resourceId(resourceId)
         kwargs["resourceId"] = resourceId
         kwargs["text"] = text
         kwargs = {key: value for key, value in kwargs.items() if value}
@@ -106,8 +110,11 @@ class IaDevice(Device):
         compressed=False,
         pretty=False,
         max_depth: int | None = None,
+        package: str | None = IA_PACKAGE_NAME,
     ) -> bool:
         dump = super().dump_hierarchy(compressed, pretty, max_depth)
+        if package:
+            dump = "\n".join(line for line in dump.splitlines() if package in line)
         Path(dump_file).write_text(dump, encoding="utf-8")
         return True
 
@@ -251,6 +258,7 @@ class IaUI:
         self.profile_tabs_container = self.resourceId("profile_tabs_container")
         self.reels_author = self.resourceId("clips_author_username")
         self.suggested_for_you = self.text("Suggested for you")
+        self.profile_header = self.resourceId("profile_header_container")
 
     def pin_digit(self, digit: int | str) -> UiObject:
         return self.device(self._resourceId("vivo_digit_text", "system"), str(digit))
@@ -284,3 +292,15 @@ class IaUI:
     def height(ui_object: UiObject) -> int:
         _, y1, _, y2 = ui_object.bounds()
         return y2 - y1
+
+    @staticmethod
+    def image(
+        screenshot: Image,
+        format: Literal["png", "jpg"] = "png",
+        name: str = "screenshot",
+    ) -> BytesIO:
+        buffer = BytesIO()
+        buffer.name = f"{name}.{format}"
+        screenshot.save(buffer, format=format)
+        buffer.seek(0)
+        return buffer

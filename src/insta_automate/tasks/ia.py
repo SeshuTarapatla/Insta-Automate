@@ -16,6 +16,15 @@ from insta_automate.vars import ELEMENT_HEIGHT, IA_DIR
 
 
 @ia_task()
+def device_ready() -> bool:
+    device = IaDevice()
+    device.start_scrcpy()
+    device.unlock()
+    device.app_start()
+    return True
+
+
+@ia_task()
 def switch_account(
     account: Literal["main", "alt"], device: IaDevice | None = None
 ) -> bool:
@@ -31,9 +40,9 @@ def determine_entity_access(
 ) -> EntityAccess:
     log = get_run_logger()
     device = device or IaDevice()
-    log.info(f"Determining access of {repr(entity)}")
+    log.info(f"Determining access of {entity.url}")
     entity.access = device.determine_entity_access(entity)
-    log.info(f"Entity access if found out to be: {entity.access.upper()}")
+    log.info(f"Entity access is found out to be: {entity.access.upper()}")
     return entity.access
 
 
@@ -61,7 +70,7 @@ def add_new_entity(url: str, device: IaDevice | None = None) -> Entity:
 @ia_task()
 def profile_entity_scan(
     entity: Entity, *, device: IaDevice | None = None, session: Session | None = None
-):
+) -> bool:
     # initialize objects
     started = Timestamp()
     log = get_run_logger()
@@ -75,7 +84,7 @@ def profile_entity_scan(
         msg = f"Profile entity scan is called with entity of type: {entity.type.upper()}.\n{entity.model_dump_json(indent=4)}"
         log.error(msg)
         raise InvalidEntity(msg)
-    
+
     # fetch latest access status of the entity
     device.unlock()
     device.app_start()
@@ -87,7 +96,7 @@ def profile_entity_scan(
         entity.status = EntityStatus.FAILED
         session.merge(entity)
         session.commit()
-        return
+        return False
 
     # start scanning
     log.info(f"Setting entity status to {EntityStatus.SCANNING.upper()}")
@@ -128,10 +137,13 @@ def profile_entity_scan(
                 session.add(follower)
                 jpeg = scanned_dir / f"{current}.jpg"
                 element.screenshot().save(jpeg)
-                log.info(f"Scanned: {scanned} | Added: {added} | ID: {current} | Screenshot exported to: {jpeg}")
+                log.info(
+                    f"[{added}/{scanned}] @{current} | Screenshot exported to: {jpeg.relative_to(IA_DIR)}"
+                )
         entity.update(session)
         device._wait_for_network()
         device.swipe_list(elements)
+        device.press("back") if ui.action_bar_title.get_text() != entity.id else None
         device.sleep(0.5)
         while True:
             try:
@@ -146,3 +158,5 @@ def profile_entity_scan(
     log.info(
         f"Scan complete. Scanned total: {scanned} | New entities: {added} | Total time taken: {Timestamp() - started} "
     )
+    device.press("back")
+    return True
