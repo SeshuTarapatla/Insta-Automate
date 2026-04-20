@@ -8,17 +8,16 @@ from typing import Callable, Literal, ParamSpec, TypeVar
 
 from adbutils import AdbClient, adb
 from my_modules.datetime_utils import Timestamp
+from my_modules.inet import Internet
 from my_modules.logger import get_logger
 from retry import retry
 from uiautomator2 import Device
 from uiautomator2._selector import UiObject
 from wsl_bridge.scrcpy import ScrcpyClient
 
-from insta_automate.controllers.internet import Internet
 from insta_automate.exceptions import EntityAccessResolutionError
 from insta_automate.models.entity import Entity, EntityAccess
 from insta_automate.models.meta import EntityType
-from insta_automate.utils import handle_async
 from insta_automate.vars import (
     ANDROID_PIN,
     ANDROID_SERIAL,
@@ -50,7 +49,7 @@ class IaDevice(Device):
         self.inet = Internet()
 
     def _wait_for_network(self):
-        return handle_async(self.inet.verify_network)
+        return self.inet.wait_for_network()
 
     @retry(tries=3, delay=5)
     def __call__(
@@ -197,7 +196,7 @@ class IaDevice(Device):
             return self(
                 resourceId="com.instagram.android:id/clips_author_username"
             ).get_text()
-        
+
         self._wait_for_network()
         author1 = _reel_author()
         self.open_url(url)

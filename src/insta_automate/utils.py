@@ -1,6 +1,4 @@
-import asyncio
 import logging
-from typing import Callable
 
 from insta_automate.vars import IA_PACKAGE_NAME
 
@@ -20,12 +18,3 @@ def ia_int(value: str) -> int:
         factor = 1_000
         value = value[:-1]
     return round(float(value) * factor)
-
-
-def handle_async(func: Callable):
-    try:
-        loop = asyncio.get_running_loop()
-    except Exception:
-        return asyncio.run(func())
-    else:
-        return loop.create_task(func())
