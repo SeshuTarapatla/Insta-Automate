@@ -98,7 +98,7 @@ def profile_entity_scan(
         session.commit()
         return False
 
-    # start scanning
+    # update entity status and log metadata
     log.info(f"Setting entity status to {EntityStatus.SCANNING.upper()}")
     entity.status = EntityStatus.SCANNING
     session.merge(entity)
@@ -108,6 +108,8 @@ def profile_entity_scan(
     log.info(f"Root:\n{profile.model_dump_json(indent=4)}")
     session.add(profile)
     session.commit()
+
+    # pick which list to scan
     if profile.f1 < profile.f2:
         log.info("Opening profile followers list.")
         ui.profile_followers.click()
@@ -115,10 +117,14 @@ def profile_entity_scan(
         log.info("Opening profile following list.")
         ui.profile_following.click()
     ui.follower_container.must_wait()
+
+    # variable initialization
     scanned_dir.mkdir(exist_ok=True, parents=True)
     current, last = "undef", "undef1"
     scanned, added = 0, 0
     scanned_set = set()
+
+    # start scanning
     while True:
         elements = [
             element
@@ -155,6 +161,11 @@ def profile_entity_scan(
             break
         else:
             last = current
+    
+    # update entity status to COMPLETE and return
+    entity.status = EntityStatus.COMPLETED
+    session.add(entity)
+    session.commit()
     log.info(
         f"Scan complete. Scanned total: {scanned} | New entities: {added} | Total time taken: {Timestamp() - started} "
     )
