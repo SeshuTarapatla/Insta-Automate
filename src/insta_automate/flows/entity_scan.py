@@ -34,8 +34,7 @@ async def entity_scan(url: str):
     match entity.type:
         case EntityType.PROFILE:
             status = profile_entity_scan(entity, session=session)
-            # if status and entity.access == EntityAccess.PRIVATE:
-            if status:
+            if status and entity.access == EntityAccess.PRIVATE:
                 await notify_unfollow(entity)
         case _:
             log.error(f"Entity scan for '{entity.type.upper()}' is not implemented.")
