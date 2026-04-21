@@ -6,6 +6,7 @@ from insta_automate.controllers.postgres import SessionLocal
 from insta_automate.flows import ia_flow
 from insta_automate.models.entity import Entity
 from insta_automate.models.meta import EntityAccess, EntityStatus, EntityType
+from insta_automate.models.scanned import ScanList
 from insta_automate.tasks.db import db_backup
 from insta_automate.tasks.ia import (
     determine_entity_access,
@@ -16,7 +17,7 @@ from insta_automate.tasks.tl import notify_unfollow
 
 
 @ia_flow()
-async def entity_scan(url: str):
+async def entity_scan(url: str, list: ScanList = ScanList.AUTO):
     log = get_run_logger()
     session = SessionLocal()
     status = None
@@ -32,9 +33,10 @@ async def entity_scan(url: str):
     log.info(entity.model_dump_json(indent=4))
     if entity.status == EntityStatus.COMPLETED:
         log.error("This entity has been already scanned.")
+        return
     match entity.type:
         case EntityType.PROFILE:
-            status = profile_entity_scan(entity, session=session)
+            status = profile_entity_scan(entity, list=list, session=session)
             if status and entity.access == EntityAccess.PRIVATE:
                 await notify_unfollow(entity)
         case _:

@@ -9,7 +9,7 @@ from insta_automate.controllers.postgres import SessionLocal
 from insta_automate.exceptions import InvalidEntity
 from insta_automate.models.entity import Entity
 from insta_automate.models.meta import EntityAccess, EntityStatus, EntityType
-from insta_automate.models.scanned import Scanned
+from insta_automate.models.scanned import ScanList, Scanned
 from insta_automate.models.user import User
 from insta_automate.tasks import ia_task
 from insta_automate.vars import ELEMENT_HEIGHT, IA_DIR
@@ -69,7 +69,11 @@ def add_new_entity(url: str, device: IaDevice | None = None) -> Entity:
 
 @ia_task()
 def profile_entity_scan(
-    entity: Entity, *, device: IaDevice | None = None, session: Session | None = None
+    entity: Entity,
+    list: ScanList | None = None,
+    *,
+    device: IaDevice | None = None,
+    session: Session | None = None,
 ) -> bool:
     # initialize objects
     started = Timestamp()
@@ -111,11 +115,15 @@ def profile_entity_scan(
 
     # pick which list to scan
     if profile.f1 < profile.f2:
-        log.info("Opening profile followers list.")
-        ui.profile_followers.click()
+        _list, list_element = "followers", ui.profile_followers
     else:
-        log.info("Opening profile following list.")
-        ui.profile_following.click()
+        _list, list_element = "following", ui.profile_following
+    if list == ScanList.FOLLOWERS:
+        _list, list_element = "followers", ui.profile_followers
+    elif list == ScanList.FOLLOWING:
+        _list, list_element = "following", ui.profile_following
+    log.info(f"Opening profile {_list} list.")
+    list_element.click()
     ui.follower_container.must_wait()
 
     # variable initialization

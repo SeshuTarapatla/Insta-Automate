@@ -1,8 +1,15 @@
+from enum import StrEnum, auto
 from typing import Self
 
 from sqlmodel import Field, Session, SQLModel, select
 
 from insta_automate.models.meta import Gender
+
+
+class ScanList(StrEnum):
+    FOLLOWERS = auto()
+    FOLLOWING = auto()
+    AUTO = auto()
 
 
 class Scanned(SQLModel, table=True):
@@ -13,4 +20,3 @@ class Scanned(SQLModel, table=True):
     def fetch(self: Self | str, session: Session) -> "Scanned | None":
         id = self.id if isinstance(self, Scanned) else self
         return session.exec(select(Scanned).where(Scanned.id == id)).one_or_none()
-    
