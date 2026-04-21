@@ -27,6 +27,7 @@ class DockerEnv(BaseModel):
     IA_PREFECT_WORKPOOL: str = IA_PREFECT_WORKPOOL
     WINDOWS_HOST: str = get_wsl_host_ip()
     TZ: str = "Asia/Kolkata"
+    IA_DIR: str = "/insta-automate"
 
     def model_dump_env(self) -> list[str]:
         return [f"ENV {key}='{value}'" for key, value in self.model_dump().items()]

@@ -27,5 +27,5 @@ ADB_SERVER_SOCKET: str = f"tcp:{WINDOWS_HOST}:5037"
 ANDROID_PIN: str = getenv("ANDROID_PIN", "")
 ANDROID_SERIAL: str = getenv("ANDROID_SERIAL", "")
 GIT_URL: str = getenv("GIT_URL", "")
-IA_DIR: Path = Path("~/Pictures/insta-automate").expanduser()
+IA_DIR: Path = Path(getenv("IA_DIR", ""))
 ELEMENT_HEIGHT: int = 198
