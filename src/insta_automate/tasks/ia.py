@@ -149,19 +149,21 @@ def profile_entity_scan(
         entity.update(session)
         device._wait_for_network()
         device.swipe_list(elements)
-        device.press("back") if ui.action_bar_title.get_text() != entity.id else None
-        device.sleep(0.5)
         while True:
             try:
                 ui.follower_container_loader.click_gone()
+                device.press(
+                    "back"
+                ) if ui.action_bar_title.get_text() != entity.id else None
+                device.sleep(0.5)
                 break
             except Exception:
                 pass
-        if current == last:
+        if current == last and ui.suggested_for_you.exists:
             break
         else:
             last = current
-    
+
     # update entity status to COMPLETE and return
     entity.status = EntityStatus.COMPLETED
     session.add(entity)
