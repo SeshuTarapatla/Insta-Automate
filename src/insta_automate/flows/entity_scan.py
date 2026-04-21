@@ -6,6 +6,7 @@ from insta_automate.controllers.postgres import SessionLocal
 from insta_automate.flows import ia_flow
 from insta_automate.models.entity import Entity
 from insta_automate.models.meta import EntityAccess, EntityStatus, EntityType
+from insta_automate.tasks.db import db_backup
 from insta_automate.tasks.ia import (
     determine_entity_access,
     device_ready,
@@ -38,6 +39,7 @@ async def entity_scan(url: str):
                 await notify_unfollow(entity)
         case _:
             log.error(f"Entity scan for '{entity.type.upper()}' is not implemented.")
+    await db_backup()
 
 
 if __name__ == "__main__":
