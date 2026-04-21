@@ -50,14 +50,17 @@ class Prefect:
 
     async def ia_flows_triggers(self):
         while True:
-            if entities := Entity.fetch_queued_entities(self.session):
-                log.info(f"Total entities queued for scan: {len(entities)}")
-                log.info(
-                    f"Trigerring scan for:\n{entities[0].model_dump_json(indent=4)}"
-                )
-                self.inet.wait_for_network()
-                await self.wait_for_device()
-                await self.entity_scan.trigger(parameters={"url": entities[0].url})
+            try:
+                if entities := Entity.fetch_queued_entities(self.session):
+                    log.info(f"Total entities queued for scan: {len(entities)}")
+                    log.info(
+                        f"Trigerring scan for:\n{entities[0].model_dump_json(indent=4)}"
+                    )
+                    self.inet.wait_for_network()
+                    await self.wait_for_device()
+                    await self.entity_scan.trigger(parameters={"url": entities[0].url})
+            except Exception as e:
+                log.error(f"IA Flows trigger exception: {e}")
             await asyncio.sleep(10)
 
     async def ping_telegram(self):
