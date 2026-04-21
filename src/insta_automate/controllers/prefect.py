@@ -27,7 +27,6 @@ class Prefect:
         self.session = SessionLocal()
         self.inet = Internet()
 
-        self.entity_ingest_trigger: bool = False
         self.device: IaDevice = cast(IaDevice, None)
 
         self.entity_ingest = Deployment("entity-ingest")
@@ -51,12 +50,6 @@ class Prefect:
 
     async def ia_flows_triggers(self):
         while True:
-            if self.entity_ingest_trigger:
-                log.info("New entities found to ingest.")
-                self.inet.wait_for_network()
-                await self.entity_ingest.trigger()
-                await self.ping_telegram()
-                self.entity_ingest_trigger = False
             if entities := Entity.fetch_queued_entities(self.session):
                 log.info(f"Total entities queued for scan: {len(entities)}")
                 log.info(f"Trigerring scan for {repr(entities[0])}")
@@ -69,24 +62,35 @@ class Prefect:
         log.info("Pinging telegram to keep session alive.")
         await self.tl.start()
 
-    async def keep_telegram_alive(self, wait: float = 600):
+    async def keep_telegram_alive(self, wait: float = 1800):
         while True:
             await asyncio.sleep(wait)
             await self.ping_telegram()
+
+    async def entity_ingest_trigger(self):
+        log.info("New entities found to ingest.")
+        self.inet.wait_for_network()
+        await self.entity_ingest.trigger()
+        await self.ping_telegram()
+
+    async def entity_ingest_time_trigger(self, wait: float = 600):
+        while True:
+            if await self.tl.entities_exist:
+                await self.entity_ingest_trigger()
+            await asyncio.sleep(wait)
 
     async def serve(self):
         await self.tl.start()
         await self.wait_for_device()
         log.info("Insta Automate Scheduler and Trigerrer started!")
 
-        self.entity_ingest_trigger = await self.tl.entities_exist
-
         asyncio.create_task(self.keep_telegram_alive())
+        asyncio.create_task(self.entity_ingest_time_trigger())
         asyncio.create_task(self.ia_flows_triggers())
 
         @self.tl.on(NewMessage(chats=self.tl.entity_channel))
-        async def new_entity_message(event: NewMessage.Event):
-            self.entity_ingest_trigger = True
+        async def entity_ingest_message_trigger(event: NewMessage.Event):
+            await self.entity_ingest_trigger()
 
         await handle_await(self.tl.run_until_disconnected())
 
