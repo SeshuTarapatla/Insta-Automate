@@ -70,7 +70,7 @@ def add_new_entity(url: str, device: IaDevice | None = None) -> Entity:
 @ia_task()
 def profile_entity_scan(
     entity: Entity,
-    list: ScanList | None = None,
+    list: ScanList = ScanList.AUTO,
     *,
     device: IaDevice | None = None,
     session: Session | None = None,
@@ -114,14 +114,15 @@ def profile_entity_scan(
     session.commit()
 
     # pick which list to scan
-    if profile.f1 < profile.f2:
-        _list, list_element = "followers", ui.profile_followers
-    else:
-        _list, list_element = "following", ui.profile_following
     if list == ScanList.FOLLOWERS:
         _list, list_element = "followers", ui.profile_followers
     elif list == ScanList.FOLLOWING:
         _list, list_element = "following", ui.profile_following
+    else:
+        if profile.f1 < profile.f2:
+            _list, list_element = "followers", ui.profile_followers
+        else:
+            _list, list_element = "following", ui.profile_following
     log.info(f"Opening profile {_list} list.")
     list_element.click()
     ui.follower_container.must_wait()
