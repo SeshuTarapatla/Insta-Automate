@@ -61,6 +61,7 @@ class Prefect:
                     await self.entity_scan.trigger(parameters={"url": entities[0].url})
             except Exception as e:
                 log.error(f"IA Flows trigger exception: {e}")
+                self.session.rollback()
             await asyncio.sleep(10)
 
     async def ping_telegram(self):
