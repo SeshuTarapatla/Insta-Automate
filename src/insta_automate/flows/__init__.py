@@ -19,16 +19,12 @@ log = get_logger(__name__)
 def ia_flow(
     *args,
     flow_run_name=lambda: f"{flow_run.flow_name}-{Timestamp().strftime('hyphen')}",
-    retries: int | None = 3,
-    retry_delay_seconds: int | None = 30,
     **kwargs,
 ):
     set_logger_propagation()
     return flow(
         *args,
         flow_run_name=flow_run_name,
-        retries=retries,
-        retry_delay_seconds=retry_delay_seconds,
         **kwargs,
     )
 

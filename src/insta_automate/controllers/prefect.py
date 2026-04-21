@@ -24,12 +24,14 @@ log = get_logger(__name__)
 class Prefect:
     def __init__(self) -> None:
         self.tl = IaTelegram()
-        self.entity_ingest_trigger: bool = False
-        self.device: IaDevice = cast(IaDevice, None)
-        self.entity_ingest = Deployment("entity-ingest")
-        self.entity_scan = Deployment("entity-scan")
         self.session = SessionLocal()
         self.inet = Internet()
+
+        self.entity_ingest_trigger: bool = False
+        self.device: IaDevice = cast(IaDevice, None)
+
+        self.entity_ingest = Deployment("entity-ingest")
+        self.entity_scan = Deployment("entity-scan")
 
     async def wait_for_device(self):
         notification: Message = cast(Message, None)
