@@ -6,6 +6,7 @@ from my_modules.postgres import Postgres
 from sqlmodel import Session, SQLModel
 
 from insta_automate.models.entity import Entity
+from insta_automate.models.meta import Scan
 from insta_automate.models.scanned import Scanned
 from insta_automate.models.user import User
 from insta_automate.vars import IA_DATABASE
@@ -32,7 +33,7 @@ class IaPostgres(Postgres):
         else:
             log.info(f"Creating a new [cyan]{IA_DATABASE}[/] PostgreSQL database.")
             ia_db.create_db()
-        _ = [Entity, User, Scanned]
+        _ = [Entity, User, Scanned, Scan]
         log.info(
             f"Creating required tables for [cyan]{IA_DATABASE}[/] PostgreSQL database."
         )
