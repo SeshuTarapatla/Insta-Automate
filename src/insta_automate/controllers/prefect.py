@@ -46,6 +46,7 @@ class Prefect:
             await self.tl.purge_adb_notifications()
         self.device = self.device or IaDevice()
         self.device.start_scrcpy()
+        self.device.sleep(1)
         self.device.lock()
 
     async def ia_flows_triggers(self):
