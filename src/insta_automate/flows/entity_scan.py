@@ -14,7 +14,7 @@ from insta_automate.tasks.ia import (
     post_entity_scan,
     profile_entity_scan,
 )
-from insta_automate.tasks.tl import notify_scan_limit_reached, notify_unfollow
+from insta_automate.tasks.tl import notify_scan_limit_reached, notify_profile_unfollow
 
 
 @ia_flow()
@@ -40,7 +40,7 @@ async def entity_scan(url: str, list: ScanList = ScanList.AUTO):
         case EntityType.PROFILE:
             status = profile_entity_scan(entity, list=list, session=session)
             if status is True and entity.access == EntityAccess.PRIVATE:
-                await notify_unfollow(entity)
+                await notify_profile_unfollow(entity)
         case EntityType.REEL | EntityType.POST:
             status = post_entity_scan(entity, session=session)
             if status:

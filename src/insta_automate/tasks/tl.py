@@ -7,7 +7,7 @@ from insta_automate.tasks import ia_task
 
 
 @ia_task()
-async def notify_unfollow(entity: Entity):
+async def notify_profile_unfollow(entity: Entity):
     tl = await IaTelegram.get_client()
     device = IaDevice()
     ui = device.ui
