@@ -10,7 +10,7 @@ from my_modules.helpers import handle_await
 from my_modules.inet import Internet
 from my_modules.logger import get_logger
 from telethon import TelegramClient
-from telethon.hints import EntityLike, FileLike
+from telethon.hints import EntityLike, FileLike, ProgressCallback
 from telethon.sessions import StringSession
 from telethon.tl.custom.dialog import Dialog
 from telethon.tl.functions.channels import CreateChannelRequest, EditAdminRequest
@@ -282,25 +282,36 @@ class IaTelegram(UserTelegramClient):
             await self.add_bot_admin_to_channel(channel, self.TELEGRAM_BOT_NAME)
         return channel
 
-    async def backup(self, file: Path):
+    async def backup(
+        self,
+        file: Path,
+        progress_callback: ProgressCallback = cast(ProgressCallback, None),
+    ):
         log.info(
             f"Uploading '{file.name}' to [bold magenta]{IA_BACKUP_CHANNEL}[/] channel."
         )
         self.inet.wait_for_network()
-        await self.send_file(self.backup_channel, file=file.as_posix())
+        await self.send_file(
+            self.backup_channel,
+            file=file.as_posix(),
+            progress_callback=progress_callback,
+        )
         log.info("Upload complete. Backup [bold green]successful[/].")
 
-    async def fetch_last_backup(self) -> Path:
+    async def fetch_last_backup(
+        self,
+        progress_callback: ProgressCallback = cast(ProgressCallback, None),
+    ) -> Path:
         async for msg in self.iter_messages(self.backup_channel, limit=1, min_id=1):
             log.info(
-                f"Downloading last backup of [blue]{IA_DATABASE}[/]: '{msg.document.attributes[0].file_name}'"
+                f"Downloading last backup of [blue]insta automate[/]: '{msg.document.attributes[0].file_name}'"
             )
-            backup = await self.download_media(msg)
+            backup = await self.download_media(msg, progress_callback=progress_callback)
             if self.backup:
                 backup_file = Path(str(backup))
                 log.info(f"File downloaded: '{backup_file.as_posix()}'")
                 return backup_file
-        raise IaTelegramBackupNotFound(f"No backup found for {IA_DATABASE} database.")
+        raise IaTelegramBackupNotFound("No backup found for insta automate.")
 
     async def purge_adb_notifications(self):
         for text in (IaMessages.DEVICE_CONNECTED, IaMessages.DEVICE_DISCONNECTED):

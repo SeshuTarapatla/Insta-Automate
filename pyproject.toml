@@ -8,12 +8,13 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "adbutils[apk]>=2.12.0",
     "async-typer>=0.1.10",
+    "humanize>=4.15.0",
     "my-modules",
     "pillow>=12.2.0",
     "prefect-k3s",
     "python-dotenv>=1.2.2",
+    "send2trash>=2.1.0",
     "sqlmodel>=0.0.38",
     "telethon>=1.42.0",
     "uiautomator2>=3.5.0",

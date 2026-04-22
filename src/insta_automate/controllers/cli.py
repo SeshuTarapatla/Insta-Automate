@@ -4,6 +4,7 @@ from async_typer import AsyncTyper
 from my_modules.logger import get_logger
 from typer import Option
 
+from insta_automate.controllers.data import IaData
 from insta_automate.controllers.docker import IaDocker
 from insta_automate.controllers.postgres import IaPostgres
 from insta_automate.controllers.prefect import Prefect
@@ -64,28 +65,6 @@ def db_init(
     IaPostgres.init(drop=drop)
 
 
-@db.async_command(
-    name="backup", help="Take backup of Insta Automate database into Telegram."
-)
-async def db_backup():
-    pg = IaPostgres()
-    backup = pg.backup_db()
-    tl = await IaTelegram.get_client()
-    await tl.backup(backup)
-    backup.unlink()
-
-
-@db.async_command(
-    name="restore", help="Restore Insta Automate database from last Telegram backup."
-)
-async def db_restore():
-    tl = await IaTelegram.get_client()
-    backup = await tl.fetch_last_backup()
-    pg = IaPostgres()
-    pg.restore_db(backup)
-    backup.unlink()
-
-
 @prefect.async_command(
     name="serve", help="Serve Prefect triggerer and scheduler for Insta Automate flows."
 )
@@ -96,3 +75,13 @@ async def prefect_serve():
 @prefect.async_command(name="deploy", help="Deploy all Insta Automate flows.")
 async def prefect_deploy():
     await IaFlows.deploy_all()
+
+
+@ia.async_command(name="backup", help="Take snapshot backup of Insta Automate.")
+async def ia_backup():
+    await IaData().backup()
+
+
+@ia.async_command(name="restore", help="Restore Insta Automate from a backup snapshot.")
+async def ia_restore():
+    await IaData().restore()

@@ -208,5 +208,7 @@ __marimo__/
 
 *.jpg
 *.ipynb
+*.tar
+*.tar.gz
 Dockerfile
 dump.xml
