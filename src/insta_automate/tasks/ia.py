@@ -1,5 +1,3 @@
-from typing import Literal
-
 from my_modules.datetime_utils import Timestamp
 from prefect import get_run_logger
 from sqlmodel import Session
@@ -25,18 +23,12 @@ def device_ready() -> bool:
 
 
 @ia_task()
-def switch_account(
-    account: Literal["main", "alt"], device: IaDevice | None = None
-) -> bool:
+def switch_account_for_entity(entity: Entity, device: IaDevice | None = None) -> bool:
+    account = "alt" if entity.access == EntityAccess.PUBLIC else "main"
     log = get_run_logger()
     device = device or IaDevice()
     log.info(f"Switching to {account.upper()} account.")
     return device.switch_account(account)
-
-
-@ia_task()
-def switch_account_for_entity(entity: Entity, device: IaDevice | None = None) -> bool:
-    return switch_account("alt" if entity.access == EntityAccess.PUBLIC else "main")
 
 
 @ia_task()
@@ -202,7 +194,7 @@ def profile_entity_scan(
 
 
 @ia_task()
-def reel_entity_scan(
+def post_entity_scan(
     entity: Entity, device: IaDevice | None = None, session: Session | None = None
 ):
     started = Timestamp()
@@ -211,8 +203,8 @@ def reel_entity_scan(
     session = session or SessionLocal()
     ui = device.ui
 
-    if entity.type != EntityType.REEL:
-        msg = f"Reel entity scan is called with entity of type: {entity.type.upper()}.\n{entity.model_dump_json(indent=4)}"
+    if entity.type not in (EntityType.REEL, EntityType.POST):
+        msg = f"Post entity scan is called with entity of type: {entity.type.upper()}.\n{entity.model_dump_json(indent=4)}"
         log.error(msg)
         raise InvalidEntity(msg)
 
@@ -222,13 +214,15 @@ def reel_entity_scan(
 
     # update entity status and log metadata
     log.info(f"Setting entity status to {EntityStatus.SCANNING.upper()}")
-    entity.status = EntityStatus.SCANNING
-    session.merge(entity)
-    session.commit()
+    entity.update(session, status=EntityStatus.SCANNING)
 
     # open likes list to scan
-    ui.reel_like_count.click()
-    ui.reel_drag_bar.drag_to(0, 0)
+    if entity.type == EntityType.REEL:
+        likes_element = ui.reel_like_count
+    else:
+        likes_element = ui.post_like_count
+    likes_element.click()
+    ui.likes_drag_bar.drag_to(0, 0)
 
     # variable initialization
     SCANNED_DIR.mkdir(exist_ok=True, parents=True)
@@ -239,13 +233,13 @@ def reel_entity_scan(
     while True:
         elements = [
             element
-            for element in ui.reel_like_container
+            for element in ui.like_container
             if ui.height(element) == ELEMENT_HEIGHT
         ]
         for element in elements:
             scanned += 1
             current = element.child(
-                resourceId=ui.reel_like_id.selector["resourceId"]
+                resourceId=ui.like_container_id.selector["resourceId"]
             ).get_text()
             like = Scanned(id=current, root=entity.id)
             if current not in scanned_set and like.fetch(session) is None:
@@ -272,4 +266,3 @@ def reel_entity_scan(
     )
     device.press("back")
     return True
-

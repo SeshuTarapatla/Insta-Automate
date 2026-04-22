@@ -7,11 +7,11 @@ from sys import platform
 from time import sleep
 from typing import Callable, Literal, ParamSpec, TypeVar
 
-from PIL.Image import Image
 from adbutils import AdbClient, adb
 from my_modules.datetime_utils import Timestamp
 from my_modules.inet import Internet
 from my_modules.logger import get_logger
+from PIL.Image import Image
 from retry import retry
 from uiautomator2 import Device
 from uiautomator2._selector import UiObject
@@ -172,7 +172,7 @@ class IaDevice(Device):
         return True
 
     def _ia_home(self):
-        if self.ui.reel_drag_bar.exists:
+        if self.ui.likes_drag_bar.exists or self.ui.share_drag_bar.exists:
             self.press("back")
         while self.ui.back_button.exists:
             self.ui.back_button.click()
@@ -202,9 +202,10 @@ class IaDevice(Device):
         started_at = Timestamp()
         self._wait_for_network()
         while (Timestamp() - started_at).seconds <= timeout:
-            if self.ui.private_account_banner.exists:
-                return EntityAccess.PRIVATE
-            elif self.ui.private_profile_banner.exists:
+            if (
+                self.ui.private_account_banner.exists
+                or self.ui.private_profile_banner.exists
+            ):
                 return EntityAccess.PRIVATE
             elif self.ui.profile_tabs_container.exists:
                 return EntityAccess.PUBLIC
@@ -213,7 +214,10 @@ class IaDevice(Device):
         started_at = Timestamp()
         self._wait_for_network()
         while (Timestamp() - started_at).seconds <= timeout:
-            if self.ui.private_account_banner.exists:
+            if (
+                self.ui.private_account_banner.exists
+                or self.ui.private_profile_banner.exists
+            ):
                 return EntityAccess.PRIVATE
             elif self.ui.post_save_button.exists:
                 return EntityAccess.PUBLIC
@@ -261,6 +265,9 @@ class IaUI:
         self.follower_container = self.resourceId("follow_list_container")
         self.follower_container_id = self.resourceId("follow_list_username")
         self.follower_container_loader = self.resourceId("row_load_more_button")
+        self.like_container = self.resourceId("row_user_container_base")
+        self.like_container_id = self.resourceId("row_user_primary_name")
+        self.likes_drag_bar = self.resourceId("bottom_sheet_drag_handle_prism")
         self.main_account = self.text(IA_MAIN_ACCOUNT)
         self.post_comment_button = self.resourceId("row_feed_button_comment")
         self.post_group_buttons = self.resourceId("row_feed_view_group_buttons")
@@ -283,14 +290,14 @@ class IaUI:
         self.profile_posts = self.resourceId("profile_header_familiar_post_count_value")
         self.profile_tab = self.resourceId("profile_tab")
         self.profile_tabs_container = self.resourceId("profile_tabs_container")
-        self.reel_drag_bar = self.resourceId("bottom_sheet_drag_handle_prism")
-        self.reel_like_container = self.resourceId("row_user_container_base")
         self.reel_like_count = self.resourceId("like_count")
-        self.reel_like_id = self.resourceId("row_user_primary_name")
         self.reels_author = self.resourceId("clips_author_username")
         self.search_bar = self.resourceId("action_bar_search_edit_text")
         self.search_result = self.resourceId("row_search_user_info_container")
         self.search_tab = self.resourceId("search_tab")
+        self.share_drag_bar = self.resourceId(
+            "direct_private_share_action_bar_container_view"
+        )
         self.suggested_for_you = self.text("Suggested for you")
 
     def pin_digit(self, digit: int | str) -> UiObject:

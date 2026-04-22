@@ -22,6 +22,6 @@ async def notify_unfollow(entity: Entity):
 
 
 @ia_task()
-async def notify_scan_limit(dt: date, type: str, value: int):
+async def notify_scan_limit_reached(dt: date, type: str, value: int):
     tl = await IaTelegram.get_client()
     await tl.bot.notify(f"Scan limit reached for **{dt}**. {type.upper()}: {value}")
