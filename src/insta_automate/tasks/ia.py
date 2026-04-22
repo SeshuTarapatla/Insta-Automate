@@ -121,7 +121,7 @@ def profile_entity_scan(
     profile = User.from_ui(device.ui)
     profile.access = entity.access
     log.info(f"Root:\n{profile.model_dump_json(indent=4)}")
-    session.add(profile)
+    session.merge(profile)
     session.commit()
 
     # pick which list to scan
