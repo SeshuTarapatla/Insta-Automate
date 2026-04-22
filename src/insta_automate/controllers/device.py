@@ -49,6 +49,7 @@ class IaDevice(Device):
         self.package = package
         self.current_user: Literal["main", "alt"] = "alt"
         self.inet = Internet()
+        self.lock = self.screen_off
 
     def _wait_for_network(self):
         return self.inet.wait_for_network()

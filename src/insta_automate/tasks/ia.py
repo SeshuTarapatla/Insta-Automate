@@ -14,12 +14,12 @@ from insta_automate.vars import ELEMENT_HEIGHT, IA_DIR, SCANNED_DIR
 
 
 @ia_task()
-def device_ready() -> bool:
+def device_ready() -> IaDevice:
     device = IaDevice()
     device.start_scrcpy()
     device.unlock()
     device.app_start()
-    return True
+    return device
 
 
 @ia_task()

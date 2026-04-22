@@ -23,7 +23,7 @@ async def entity_scan(url: str, list: ScanList = ScanList.AUTO):
     session = SessionLocal()
     status = None
     scan = Scan.fetch(session)
-    device_ready()
+    device = device_ready()
     if (entity := Entity.fetch(url, session)) is None:
         log.warning(
             f"Entity with url: {url} not found in the db. Creating a new one..."
@@ -47,6 +47,7 @@ async def entity_scan(url: str, list: ScanList = ScanList.AUTO):
                 scan.increment(entity.type, session=session)
         case _:
             log.error(f"Entity scan for '{entity.type.upper()}' is not implemented.")
+    device.lock()
     if status is True:
         scan.increment(entity.type, session=session)
         await db_backup()
