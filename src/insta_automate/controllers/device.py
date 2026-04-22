@@ -123,6 +123,23 @@ class IaDevice(Device):
         super().open_url(url)
         sleep(wait)
 
+    def open_entity(self, entity: Entity):
+        by_url = False
+        if entity.type == EntityType.PROFILE:
+            self._ia_home()
+            if not self.ui.search_tab.exists:
+                self.app_restart()
+                self.ui.search_tab.must_wait()
+            self.ui.search_bar.click()
+            self.send_keys(entity.id, clear=True)
+            self.sleep(1)
+            if (result := self.ui.search_result.child(text=entity.id)).exists:
+                result.click()
+            else:
+                by_url = True
+        if entity.type != EntityType.PROFILE or by_url:
+            self.open_url(entity.url)
+
     def swipe_list(self, elements: list[UiObject], duration: float = 1):
         if len(elements) > 1:
             return self.swipe(
@@ -143,9 +160,7 @@ class IaDevice(Device):
                 raise ValueError(
                     f'{account} is not a valid account identifier. Use: ["main", "alt"].'
                 )
-        while self.ui.back_button.exists:
-            self.ui.back_button.click()
-            self.sleep(0.5)
+        self._ia_home()
         if not self.ui.profile_tab.exists():
             self.app_restart()
             self.ui.profile_tab.wait()
@@ -154,6 +169,11 @@ class IaDevice(Device):
         self.press("back")
         self.sleep(1)
         return True
+
+    def _ia_home(self):
+        while self.ui.back_button.exists:
+            self.ui.back_button.click()
+            self.sleep(0.5)
 
     def determine_entity_access(
         self, entity: Entity, timeout: float = 30
@@ -259,6 +279,9 @@ class IaUI:
         self.reels_author = self.resourceId("clips_author_username")
         self.suggested_for_you = self.text("Suggested for you")
         self.profile_header = self.resourceId("profile_header_container")
+        self.search_tab = self.resourceId("search_tab")
+        self.search_bar = self.resourceId("action_bar_search_edit_text")
+        self.search_result = self.resourceId("row_search_user_info_container")
 
     def pin_digit(self, digit: int | str) -> UiObject:
         return self.device(self._resourceId("vivo_digit_text", "system"), str(digit))

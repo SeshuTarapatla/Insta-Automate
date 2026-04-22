@@ -65,6 +65,7 @@ class Entity(SQLModel, table=True):
         session.commit()
         return self
 
+
     @classmethod
     def from_url(cls, url: str):
         return cls.model_validate(cls(url=url))
