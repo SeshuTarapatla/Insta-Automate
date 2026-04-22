@@ -172,6 +172,8 @@ class IaDevice(Device):
         return True
 
     def _ia_home(self):
+        if self.ui.reel_drag_bar.exists:
+            self.press("back")
         while self.ui.back_button.exists:
             self.ui.back_button.click()
             self.sleep(0.5)
@@ -260,6 +262,9 @@ class IaUI:
         self.follower_container_id = self.resourceId("follow_list_username")
         self.follower_container_loader = self.resourceId("row_load_more_button")
         self.main_account = self.text(IA_MAIN_ACCOUNT)
+        self.post_comment_button = self.resourceId("row_feed_button_comment")
+        self.post_group_buttons = self.resourceId("row_feed_view_group_buttons")
+        self.post_like_button = self.resourceId("row_feed_button_like")
         self.post_save_button = self.resourceId("row_feed_button_save")
         self.private_account_banner = self.text("This account is private")
         self.private_profile_banner = self.text("This profile is private")
@@ -272,17 +277,21 @@ class IaUI:
         self.profile_following = self.resourceId(
             "profile_header_familiar_following_value"
         )
+        self.profile_header = self.resourceId("profile_header_container")
         self.profile_id = self.action_bar_title
         self.profile_name = self.resourceId("profile_header_full_name_above_vanity")
         self.profile_posts = self.resourceId("profile_header_familiar_post_count_value")
         self.profile_tab = self.resourceId("profile_tab")
         self.profile_tabs_container = self.resourceId("profile_tabs_container")
+        self.reel_drag_bar = self.resourceId("bottom_sheet_drag_handle_prism")
+        self.reel_like_container = self.resourceId("row_user_container_base")
+        self.reel_like_count = self.resourceId("like_count")
+        self.reel_like_id = self.resourceId("row_user_primary_name")
         self.reels_author = self.resourceId("clips_author_username")
-        self.suggested_for_you = self.text("Suggested for you")
-        self.profile_header = self.resourceId("profile_header_container")
-        self.search_tab = self.resourceId("search_tab")
         self.search_bar = self.resourceId("action_bar_search_edit_text")
         self.search_result = self.resourceId("row_search_user_info_container")
+        self.search_tab = self.resourceId("search_tab")
+        self.suggested_for_you = self.text("Suggested for you")
 
     def pin_digit(self, digit: int | str) -> UiObject:
         return self.device(self._resourceId("vivo_digit_text", "system"), str(digit))
@@ -328,3 +337,14 @@ class IaUI:
         screenshot.save(buffer, format=format)
         buffer.seek(0)
         return buffer
+
+    @property
+    def post_like_count(self) -> UiObject:
+        x1, _ = self.post_like_button.center()
+        x2, _ = self.post_comment_button.center()
+        for element in self.post_group_buttons.child(className="android.widget.Button"):
+            if x1 < element.center()[0] < x2:
+                return element
+        # if (element := self.device(textContains="Liked by")).exists:
+        #     return element
+        raise Exception

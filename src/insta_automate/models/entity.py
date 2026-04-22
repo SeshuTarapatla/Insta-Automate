@@ -1,4 +1,5 @@
 from datetime import datetime
+from pprint import pformat
 from typing import Self
 from urllib.parse import urlparse, urlunparse
 
@@ -57,14 +58,24 @@ class Entity(SQLModel, table=True):
         url = Entity.valid_entity_url(url)
         return session.exec(select(Entity).where(Entity.url == url)).one_or_none()
 
-    def update(self, session: Session) -> "Entity":
+    def update(
+        self,
+        session: Session,
+        *,
+        access: EntityAccess | None = None,
+        status: EntityStatus | None = None,
+    ) -> "Entity":
         self.scanned = session.exec(
             select(func.count()).where(Scanned.root == self.id)
         ).one()
+        self.status = status or self.status
+        self.access = access or self.access
         session.merge(self)
         session.commit()
         return self
 
+    def __repr__(self) -> str:
+        return pformat(self.model_dump(mode="json"))
 
     @classmethod
     def from_url(cls, url: str):

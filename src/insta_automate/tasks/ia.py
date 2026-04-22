@@ -12,7 +12,7 @@ from insta_automate.models.meta import EntityAccess, EntityStatus, EntityType
 from insta_automate.models.scanned import ScanList, Scanned
 from insta_automate.models.user import User
 from insta_automate.tasks import ia_task
-from insta_automate.vars import ELEMENT_HEIGHT, IA_DIR
+from insta_automate.vars import ELEMENT_HEIGHT, IA_DIR, SCANNED_DIR
 
 
 @ia_task()
@@ -35,6 +35,11 @@ def switch_account(
 
 
 @ia_task()
+def switch_account_for_entity(entity: Entity, device: IaDevice | None = None) -> bool:
+    return switch_account("alt" if entity.access == EntityAccess.PUBLIC else "main")
+
+
+@ia_task()
 def determine_entity_access(
     entity: Entity, device: IaDevice | None = None
 ) -> EntityAccess:
@@ -44,6 +49,32 @@ def determine_entity_access(
     entity.access = device.determine_entity_access(entity)
     log.info(f"Entity access is found out to be: {entity.access.upper()}")
     return entity.access
+
+
+@ia_task()
+def scan_entity_init(
+    entity: Entity, device: IaDevice | None = None, session: Session | None = None
+):
+    log = get_run_logger()
+    device = device or IaDevice()
+    session = session or SessionLocal()
+
+    device.unlock()
+    device.app_start()
+    switch_account_for_entity(entity)
+    device.open_entity(entity)
+    match entity.type:
+        case EntityType.PROFILE:
+            access = device._profile_entity_access()
+        case EntityType.REEL:
+            access = device._reel_entity_access(entity.url)
+        case EntityType.POST:
+            access = device._post_entity_access()
+    if access != EntityAccess.PUBLIC:
+        log.error("Entity is private locked. Cannot proceed with scan.")
+        entity.update(session, access=EntityAccess.PRIVATE, status=EntityStatus.FAILED)
+        return False
+    return True
 
 
 @ia_task()
@@ -80,7 +111,6 @@ def profile_entity_scan(
     log = get_run_logger()
     device = device or IaDevice()
     session = session or SessionLocal()
-    scanned_dir = IA_DIR / "scanned"
     ui = device.ui
 
     # match entity type with scan type
@@ -90,23 +120,12 @@ def profile_entity_scan(
         raise InvalidEntity(msg)
 
     # fetch latest access status of the entity
-    device.unlock()
-    device.app_start()
-    switch_account("alt" if entity.access == EntityAccess.PUBLIC else "main", device)
-    device.open_entity(entity)
-    if device._profile_entity_access() != EntityAccess.PUBLIC:
-        log.error("Entity is private locked. Cannot proceed with scan.")
-        entity.access = EntityAccess.PRIVATE
-        entity.status = EntityStatus.FAILED
-        session.merge(entity)
-        session.commit()
+    if not scan_entity_init(entity, device, session):
         return False
 
     # update entity status and log metadata
     log.info(f"Setting entity status to {EntityStatus.SCANNING.upper()}")
-    entity.status = EntityStatus.SCANNING
-    session.merge(entity)
-    session.commit()
+    entity.update(session, status=EntityStatus.SCANNING)
     profile = User.from_ui(device.ui)
     profile.access = entity.access
     log.info(f"Root:\n{profile.model_dump_json(indent=4)}")
@@ -128,7 +147,7 @@ def profile_entity_scan(
     ui.follower_container.must_wait()
 
     # variable initialization
-    scanned_dir.mkdir(exist_ok=True, parents=True)
+    SCANNED_DIR.mkdir(exist_ok=True, parents=True)
     current, last = "undef", "undef1"
     scanned, added = 0, 0
     scanned_set = set()
@@ -150,7 +169,7 @@ def profile_entity_scan(
                 added += 1
                 scanned_set.add(current)
                 session.add(follower)
-                jpeg = scanned_dir / f"{current}.jpg"
+                jpeg = SCANNED_DIR / f"{current}.jpg"
                 element.screenshot().save(jpeg)
                 log.info(
                     f"[{added}/{scanned}] @{current} | Exported to: {jpeg.relative_to(IA_DIR)}"
@@ -174,11 +193,83 @@ def profile_entity_scan(
             last = current
 
     # update entity status to COMPLETE and return
-    entity.status = EntityStatus.COMPLETED
-    session.add(entity)
-    session.commit()
+    entity.update(session, status=EntityStatus.COMPLETED)
     log.info(
         f"Scan complete. Scanned total: {scanned} | New entities: {added} | Total time taken: {Timestamp() - started} "
     )
     device.press("back")
     return True
+
+
+@ia_task()
+def reel_entity_scan(
+    entity: Entity, device: IaDevice | None = None, session: Session | None = None
+):
+    started = Timestamp()
+    log = get_run_logger()
+    device = device or IaDevice()
+    session = session or SessionLocal()
+    ui = device.ui
+
+    if entity.type != EntityType.REEL:
+        msg = f"Reel entity scan is called with entity of type: {entity.type.upper()}.\n{entity.model_dump_json(indent=4)}"
+        log.error(msg)
+        raise InvalidEntity(msg)
+
+    # fetch latest access status of the entity
+    if not scan_entity_init(entity, device, session):
+        return False
+
+    # update entity status and log metadata
+    log.info(f"Setting entity status to {EntityStatus.SCANNING.upper()}")
+    entity.status = EntityStatus.SCANNING
+    session.merge(entity)
+    session.commit()
+
+    # open likes list to scan
+    ui.reel_like_count.click()
+    ui.reel_drag_bar.drag_to(0, 0)
+
+    # variable initialization
+    SCANNED_DIR.mkdir(exist_ok=True, parents=True)
+    current, last = "undef", "undef1"
+    scanned, added = 0, 0
+    scanned_set = set()
+
+    while True:
+        elements = [
+            element
+            for element in ui.reel_like_container
+            if ui.height(element) == ELEMENT_HEIGHT
+        ]
+        for element in elements:
+            scanned += 1
+            current = element.child(
+                resourceId=ui.reel_like_id.selector["resourceId"]
+            ).get_text()
+            like = Scanned(id=current, root=entity.id)
+            if current not in scanned_set and like.fetch(session) is None:
+                added += 1
+                scanned_set.add(current)
+                session.add(like)
+                jpeg = SCANNED_DIR / f"{current}.jpg"
+                element.screenshot().save(jpeg)
+                log.info(
+                    f"[{added}/{scanned}] @{current} | Exported to: {jpeg.relative_to(IA_DIR)}"
+                )
+        entity.update(session)
+        device._wait_for_network()
+        device.swipe_list(elements)
+        if current == last:
+            break
+        else:
+            last = current
+
+    # update entity status to COMPLETE and return
+    entity.update(session, status=EntityStatus.COMPLETED)
+    log.info(
+        f"Scan complete. Scanned total: {scanned} | New entities: {added} | Total time taken: {Timestamp() - started} "
+    )
+    device.press("back")
+    return True
+

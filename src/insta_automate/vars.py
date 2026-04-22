@@ -29,3 +29,4 @@ ANDROID_SERIAL: str = getenv("ANDROID_SERIAL", "")
 GIT_URL: str = getenv("GIT_URL", "")
 IA_DIR: Path = Path(getenv("IA_DIR", ""))
 ELEMENT_HEIGHT: int = 198
+SCANNED_DIR: Path = IA_DIR / "scanned"
