@@ -1,3 +1,5 @@
+from datetime import date
+
 from insta_automate.controllers.device import IaDevice
 from insta_automate.controllers.telegram import IaTelegram
 from insta_automate.models.entity import Entity
@@ -17,3 +19,9 @@ async def notify_unfollow(entity: Entity):
         f"Scan complete. You can now unfollow **[@{entity.id}]({entity.url})**",
         file=image,
     )
+
+
+@ia_task()
+async def notify_scan_limit(dt: date, type: str, value: int):
+    tl = await IaTelegram.get_client()
+    await tl.bot.notify(f"Scan limit reached for **{dt}**. {type.upper()}: {value}")

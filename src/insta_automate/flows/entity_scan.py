@@ -5,7 +5,7 @@ from prefect import get_run_logger
 from insta_automate.controllers.postgres import SessionLocal
 from insta_automate.flows import ia_flow
 from insta_automate.models.entity import Entity
-from insta_automate.models.meta import EntityAccess, EntityStatus, EntityType
+from insta_automate.models.meta import EntityAccess, EntityStatus, EntityType, Scan
 from insta_automate.models.scanned import ScanList
 from insta_automate.tasks.db import db_backup
 from insta_automate.tasks.ia import (
@@ -13,7 +13,7 @@ from insta_automate.tasks.ia import (
     device_ready,
     profile_entity_scan,
 )
-from insta_automate.tasks.tl import notify_unfollow
+from insta_automate.tasks.tl import notify_scan_limit, notify_unfollow
 
 
 @ia_flow()
@@ -21,6 +21,7 @@ async def entity_scan(url: str, list: ScanList = ScanList.AUTO):
     log = get_run_logger()
     session = SessionLocal()
     status = None
+    scan = Scan.fetch(session)
     device_ready()
     if (entity := Entity.fetch(url, session)) is None:
         log.warning(
@@ -37,10 +38,14 @@ async def entity_scan(url: str, list: ScanList = ScanList.AUTO):
     match entity.type:
         case EntityType.PROFILE:
             status = profile_entity_scan(entity, list=list, session=session)
-            if status and entity.access == EntityAccess.PRIVATE:
-                await notify_unfollow(entity)
+            if status:
+                scan.increment(EntityType.PROFILE, session=session)
+                if entity.access == EntityAccess.PRIVATE:
+                    await notify_unfollow(entity)
         case _:
             log.error(f"Entity scan for '{entity.type.upper()}' is not implemented.")
+    if limit := scan.limit_reached:
+        await notify_scan_limit(*limit)
     await db_backup()
 
 

@@ -16,6 +16,7 @@ from insta_automate.controllers.device import IaDevice
 from insta_automate.controllers.postgres import SessionLocal
 from insta_automate.controllers.telegram import IaTelegram
 from insta_automate.models.entity import Entity
+from insta_automate.models.meta import Scan
 from insta_automate.models.telegram import IaMessages
 
 log = get_logger(__name__)
@@ -50,8 +51,11 @@ class Prefect:
 
     async def ia_flows_triggers(self):
         while True:
+            scan = Scan.fetch(self.session)
             try:
-                if entities := Entity.fetch_queued_entities(self.session):
+                if not scan.limit_reached and (
+                    entities := Entity.fetch_queued_entities(self.session)
+                ):
                     log.info(f"Total entities queued for scan: {len(entities)}")
                     log.info(
                         f"Trigerring scan for:\n{entities[0].model_dump_json(indent=4)}"

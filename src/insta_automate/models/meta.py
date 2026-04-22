@@ -76,10 +76,12 @@ class Scan(SQLModel, table=True):
             session.commit()
 
     @property
-    def limit_reached(self) -> tuple[Literal["profiles", "reels", "posts"], int] | None:
+    def limit_reached(
+        self,
+    ) -> tuple[date_, Literal["profiles", "reels", "posts"], int] | None:
         if self.profiles >= ScanLimit.PROFILES:
-            return "profiles", self.profiles
+            return self.date, "profiles", self.profiles
         elif self.reels >= ScanLimit.REELS:
-            return "reels", self.reels
+            return self.date, "reels", self.reels
         elif self.posts >= ScanLimit.POSTS:
-            return "posts", self.posts
+            return self.date, "posts", self.posts
