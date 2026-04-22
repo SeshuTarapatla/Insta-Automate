@@ -33,7 +33,7 @@ class Prefect:
         self.entity_ingest = Deployment("entity-ingest")
         self.entity_scan = Deployment("entity-scan")
 
-    async def wait_for_device(self, start_app: bool = False):
+    async def wait_for_device(self):
         notification: Message = cast(Message, None)
         while not IaDevice.connected():
             if notification is None:
@@ -46,9 +46,7 @@ class Prefect:
             await self.tl.purge_adb_notifications()
         self.device = self.device or IaDevice()
         self.device.start_scrcpy()
-        if start_app:
-            self.device.unlock()
-            self.device.app_start()
+        self.device.lock()
 
     async def ia_flows_triggers(self):
         while True:
@@ -62,7 +60,7 @@ class Prefect:
                         f"Trigerring scan for:\n{entities[0].model_dump_json(indent=4)}"
                     )
                     self.inet.wait_for_network()
-                    await self.wait_for_device(start_app=True)
+                    await self.wait_for_device()
                     await self.entity_scan.trigger(parameters={"url": entities[0].url})
             except Exception as e:
                 log.error(f"IA Flows trigger exception: {e}")

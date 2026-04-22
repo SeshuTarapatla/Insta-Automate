@@ -99,6 +99,7 @@ class IaDevice(Device):
 
     def app_start(self, package_name: str = IA_PACKAGE_NAME, *args, **kwargs):
         package_name = package_name or self.package
+        self.unlock()
         return super().app_start(self.package, wait=True)
 
     def app_restart(self, package_name: str = IA_PACKAGE_NAME):
