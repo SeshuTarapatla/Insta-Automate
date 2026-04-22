@@ -93,7 +93,7 @@ def profile_entity_scan(
     device.unlock()
     device.app_start()
     switch_account("alt" if entity.access == EntityAccess.PUBLIC else "main", device)
-    device.open_url(entity.url)
+    device.open_entity(entity)
     if device._profile_entity_access() != EntityAccess.PUBLIC:
         log.error("Entity is private locked. Cannot proceed with scan.")
         entity.access = EntityAccess.PRIVATE

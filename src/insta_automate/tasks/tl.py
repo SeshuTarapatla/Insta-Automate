@@ -12,7 +12,7 @@ async def notify_unfollow(entity: Entity):
     device = IaDevice()
     ui = device.ui
     if not ui.profile_header.exists:
-        device.open_url(entity.url)
+        device.open_entity(entity)
         ui.profile_header.must_wait()
     image = ui.image(ui.profile_header.screenshot(), name=entity.id)
     return await tl.bot.notify(

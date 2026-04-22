@@ -130,6 +130,7 @@ class IaDevice(Device):
             if not self.ui.search_tab.exists:
                 self.app_restart()
                 self.ui.search_tab.must_wait()
+                self.ui.search_tab.click()
             self.ui.search_bar.click()
             self.send_keys(entity.id, clear=True)
             self.sleep(1)
@@ -180,7 +181,7 @@ class IaDevice(Device):
     ) -> EntityAccess:
         self._wait_for_network()
         self.switch_account("alt")
-        self.open_url(entity.url)
+        self.open_entity(entity)
         match entity.type:
             case EntityType.PROFILE:
                 access = self._profile_entity_access(timeout)
