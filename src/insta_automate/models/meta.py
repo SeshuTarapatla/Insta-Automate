@@ -1,5 +1,7 @@
+from dataclasses import dataclass
 from datetime import datetime, date as date_
 from enum import StrEnum, auto
+from typing import Literal
 
 from my_modules.datetime_utils import Timestamp
 from sqlmodel import Field, SQLModel, Session, select
@@ -35,11 +37,18 @@ class Gender(StrEnum):
     UNDEF = auto()
 
 
+@dataclass(frozen=True)
+class ScanLimit:
+    PROFILES = 10
+    REELS = 30
+    POSTS = 30
+
+
 class Scan(SQLModel, table=True):
     date: date_ = Field(primary_key=True, default_factory=lambda: Timestamp().date())
-    profiles: int = Field(default=0, ge=0, le=10)
-    reels: int = Field(default=0, ge=0, le=30)
-    posts: int = Field(default=0, ge=0, le=30)
+    profiles: int = Field(default=0, ge=0, le=ScanLimit.PROFILES)
+    reels: int = Field(default=0, ge=0, le=ScanLimit.REELS)
+    posts: int = Field(default=0, ge=0, le=ScanLimit.POSTS)
     added_on: datetime = Field(default_factory=Timestamp)
     updated_on: datetime = Field(
         default_factory=Timestamp, sa_column_kwargs={"onupdate": Timestamp}
@@ -52,13 +61,25 @@ class Scan(SQLModel, table=True):
             return scan
         return cls()
 
-    def increment(self, entity_type: EntityType, session: Session):
+    def increment(
+        self, entity_type: EntityType, value: int = 1, session: Session | None = None
+    ):
         match entity_type:
             case EntityType.PROFILE:
-                self.profiles += 1
+                self.profiles += value
             case EntityType.REEL:
-                self.reels += 1
+                self.reels += value
             case EntityType.POST:
-                self.posts += 1
-        session.merge(self)
-        session.commit()
+                self.posts += value
+        if session:
+            session.merge(self)
+            session.commit()
+
+    @property
+    def limit_reached(self) -> tuple[Literal["profiles", "reels", "posts"], int] | None:
+        if self.profiles >= ScanLimit.PROFILES:
+            return "profiles", self.profiles
+        elif self.reels >= ScanLimit.REELS:
+            return "reels", self.reels
+        elif self.posts >= ScanLimit.POSTS:
+            return "posts", self.posts
