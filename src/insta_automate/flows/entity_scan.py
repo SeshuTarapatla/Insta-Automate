@@ -11,8 +11,8 @@ from insta_automate.tasks.db import db_backup
 from insta_automate.tasks.ia import (
     determine_entity_access,
     device_ready,
-    profile_entity_scan,
     post_entity_scan,
+    profile_entity_scan,
 )
 from insta_automate.tasks.tl import notify_scan_limit_reached, notify_unfollow
 
@@ -39,17 +39,19 @@ async def entity_scan(url: str, list: ScanList = ScanList.AUTO):
     match entity.type:
         case EntityType.PROFILE:
             status = profile_entity_scan(entity, list=list, session=session)
-            if status:
-                scan.increment(EntityType.PROFILE, session=session)
-                if entity.access == EntityAccess.PRIVATE:
-                    await notify_unfollow(entity)
+            if status is True and entity.access == EntityAccess.PRIVATE:
+                await notify_unfollow(entity)
         case EntityType.REEL | EntityType.POST:
             status = post_entity_scan(entity, session=session)
+            if status:
+                scan.increment(entity.type, session=session)
         case _:
             log.error(f"Entity scan for '{entity.type.upper()}' is not implemented.")
+    if status is True:
+        scan.increment(entity.type, session=session)
+        await db_backup()
     if limit := scan.limit_reached:
         await notify_scan_limit_reached(*limit)
-    await db_backup()
 
 
 if __name__ == "__main__":
