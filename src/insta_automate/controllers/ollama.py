@@ -30,6 +30,10 @@ class GenderClassifier:
         self.client = Client(host=OLLAMA_URL)
         self.client.generate(model=self.model, prompt="Hi", keep_alive=-1)
 
+    def _generate(self, prompt: str) -> None:
+        response = self.client.generate(model=self.model, prompt=prompt).response
+        print(response)
+
     def predict(self, image: str | Path) -> GenderPrediction:
         response = self.client.generate(
             model=self.model,
