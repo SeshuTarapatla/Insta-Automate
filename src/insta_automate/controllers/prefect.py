@@ -16,7 +16,7 @@ from insta_automate.controllers.device import IaDevice
 from insta_automate.controllers.postgres import SessionLocal
 from insta_automate.controllers.telegram import IaTelegram
 from insta_automate.models.entity import Entity
-from insta_automate.models.meta import Scan
+from insta_automate.models.scan import Scan
 from insta_automate.models.telegram import IaMessages
 
 log = get_logger(__name__)

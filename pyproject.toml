@@ -11,6 +11,7 @@ dependencies = [
     "async-typer>=0.1.10",
     "humanize>=4.15.0",
     "my-modules",
+    "ollama>=0.6.1",
     "pillow>=12.2.0",
     "prefect-k3s",
     "python-dotenv>=1.2.2",

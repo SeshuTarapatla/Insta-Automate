@@ -6,7 +6,7 @@ from my_modules.postgres import Postgres
 from sqlmodel import Session, SQLModel
 
 from insta_automate.models.entity import Entity
-from insta_automate.models.meta import Scan
+from insta_automate.models.scan import Scan
 from insta_automate.models.scanned import Scanned
 from insta_automate.models.user import User
 from insta_automate.vars import IA_DATABASE
