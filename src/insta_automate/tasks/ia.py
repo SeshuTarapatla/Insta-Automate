@@ -219,7 +219,7 @@ def post_entity_scan(
         likes_element = ui.reel_like_count
     else:
         likes_element = ui.post_like_count
-    likes_element.click()
+    likes_element.click(offset=(0, 0.5))
     ui.likes_drag_bar.drag_to(0, 0)
 
     # variable initialization

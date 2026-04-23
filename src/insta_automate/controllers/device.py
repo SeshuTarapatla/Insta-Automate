@@ -357,6 +357,6 @@ class IaUI:
         for element in self.post_group_buttons.child(className="android.widget.Button"):
             if x1 < element.center()[0] < x2:
                 return element
-        # if (element := self.device(textContains="Liked by")).exists:
-        #     return element
+        if (element := self.device(textContains="Liked by")).exists:
+            return element
         raise Exception
