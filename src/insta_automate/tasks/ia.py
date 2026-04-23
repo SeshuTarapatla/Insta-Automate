@@ -17,7 +17,6 @@ from insta_automate.vars import ELEMENT_HEIGHT, IA_DIR, SCANNED_DIR
 def device_ready() -> IaDevice:
     device = IaDevice()
     device.start_scrcpy()
-    device.unlock()
     device.app_start()
     return device
 
@@ -51,7 +50,6 @@ def scan_entity_init(
     device = device or IaDevice()
     session = session or SessionLocal()
 
-    device.unlock()
     device.app_start()
     switch_account_for_entity(entity)
     device.open_entity(entity)
