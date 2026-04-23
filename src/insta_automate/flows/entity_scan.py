@@ -2,6 +2,7 @@
 
 from prefect import get_run_logger
 
+from insta_automate.controllers.device import IaDevice
 from insta_automate.controllers.postgres import SessionLocal
 from insta_automate.flows import ia_flow
 from insta_automate.models.entity import Entity
@@ -19,12 +20,12 @@ from insta_automate.tasks.tl import notify_scan_limit_reached, notify_profile_un
 
 
 @ia_flow()
-async def entity_scan(url: str, list: ScanList = ScanList.AUTO):
+async def entity_scan(url: str, list: ScanList = ScanList.AUTO, device: IaDevice | None = None):
     log = get_run_logger()
     session = SessionLocal()
     status = None
     scan = Scan.fetch(session)
-    device = device_ready()
+    device = device or device_ready()
     if (entity := Entity.fetch(url, session)) is None:
         log.warning(
             f"Entity with url: {url} not found in the db. Creating a new one..."

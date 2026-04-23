@@ -21,3 +21,8 @@ class Scanned(SQLModel, table=True):
         return session.exec(select(cls).where(cls.id == id)).one_or_none() or cls(
             id=id, root=id
         )
+
+    def exists(self, session: Session) -> bool:
+        return bool(
+            session.exec(select(Scanned).where(Scanned.id == self.id)).one_or_none()
+        )

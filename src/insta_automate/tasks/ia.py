@@ -156,7 +156,7 @@ def profile_entity_scan(
                 resourceId=ui.follower_container_id.selector["resourceId"]
             ).get_text()
             follower = Scanned(id=current, root=entity.id)
-            if current not in scanned_set and Scanned.fetch(current, session) is None:
+            if current not in scanned_set and follower.exists(session) is False:
                 added += 1
                 scanned_set.add(current)
                 session.add(follower)
@@ -242,7 +242,7 @@ def post_entity_scan(
                 resourceId=ui.like_container_id.selector["resourceId"]
             ).get_text()
             like = Scanned(id=current, root=entity.id)
-            if current not in scanned_set and Scanned.fetch(current, session) is None:
+            if current not in scanned_set and like.exists(session) is False:
                 added += 1
                 scanned_set.add(current)
                 session.add(like)
