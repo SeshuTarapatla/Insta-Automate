@@ -47,7 +47,9 @@ class IaData:
         )
         pg_bkp.unlink()
         ia_bkp.unlink()
-        self.log.info(f"Backup complete. Total time taken: {Timestamp() - started_at}")
+        self.log.info(
+            f"[Database + {self.total} Images] Backup complete. Total time taken: {Timestamp() - started_at}"
+        )
 
     async def restore(
         self,
@@ -70,5 +72,11 @@ class IaData:
         send2trash(IA_DIR) if IA_DIR.exists() else None
         move(ia_dir, IA_DIR)
 
-        self.log.info(f"Restore complete. Total time taken: {Timestamp() - started_at}")
+        self.log.info(
+            f"[Database + {self.total} Images] Restore complete. Total time taken: {Timestamp() - started_at}"
+        )
         return ia_dir
+
+    @property
+    def total(self) -> int:
+        return len(list(IA_DIR.rglob("*.jpg")))
