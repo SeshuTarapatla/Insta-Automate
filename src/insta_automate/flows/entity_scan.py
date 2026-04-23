@@ -30,9 +30,7 @@ async def entity_scan(url: str, list: ScanList = ScanList.AUTO):
             f"Entity with url: {url} not found in the db. Creating a new one..."
         )
         entity = Entity.from_url(url)
-        entity.access = determine_entity_access(entity)
-        session.add(entity)
-        session.commit()
+        entity.update(session, access=determine_entity_access(entity))
     log.info(entity.model_dump_json(indent=4))
     if entity.status == EntityStatus.COMPLETED:
         log.error("This entity has been already scanned.")

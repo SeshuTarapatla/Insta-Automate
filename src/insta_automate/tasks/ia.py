@@ -85,8 +85,7 @@ def add_new_entity(url: str, device: IaDevice | None = None) -> Entity:
             log.info(f"Entity access type is determined to be: {entity.access.upper()}")
             log.info(entity.model_dump_json(indent=4))
             log.info("Adding entry to Entity table.")
-            session.add(entity)
-            session.commit()
+            entity.update(session)
     return entity
 
 
@@ -161,6 +160,7 @@ def profile_entity_scan(
                 added += 1
                 scanned_set.add(current)
                 session.add(follower)
+                session.commit()
                 jpeg = SCANNED_DIR / f"{current}.jpg"
                 element.screenshot().save(jpeg)
                 log.info(
