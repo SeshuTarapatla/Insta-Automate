@@ -32,6 +32,7 @@ class Prefect:
 
         self.entity_ingest = Deployment("entity-ingest")
         self.entity_scan = Deployment("entity-scan")
+        self.gender_classify = Deployment("gender-classify")
 
     async def wait_for_device(self):
         notification: Message = cast(Message, None)
