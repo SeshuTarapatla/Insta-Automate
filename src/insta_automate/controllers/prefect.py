@@ -18,6 +18,7 @@ from insta_automate.controllers.telegram import IaTelegram
 from insta_automate.models.entity import Entity
 from insta_automate.models.scan import Scan
 from insta_automate.models.telegram import IaMessages
+from insta_automate.vars import SCANNED_DIR
 
 log = get_logger(__name__)
 
@@ -50,7 +51,7 @@ class Prefect:
         self.device.sleep(1)
         self.device.lock()
 
-    async def ia_flows_triggers(self):
+    async def ia_flows_trigger(self):
         while True:
             scan = Scan.fetch(self.session)
             try:
@@ -90,6 +91,12 @@ class Prefect:
                 await self.entity_ingest_trigger()
             await asyncio.sleep(wait)
 
+    async def gender_classify_trigger(self, wait: float = 10):
+        while True:
+            if list(SCANNED_DIR.glob("*.jpg")):
+                await self.gender_classify.trigger()
+            await asyncio.sleep(wait)
+
     async def serve(self):
         await self.tl.start()
         await self.wait_for_device()
@@ -97,7 +104,8 @@ class Prefect:
 
         asyncio.create_task(self.keep_telegram_alive())
         asyncio.create_task(self.entity_ingest_time_trigger())
-        asyncio.create_task(self.ia_flows_triggers())
+        asyncio.create_task(self.gender_classify_trigger())
+        asyncio.create_task(self.ia_flows_trigger())
 
         @self.tl.on(NewMessage(chats=self.tl.entity_channel))
         async def entity_ingest_message_trigger(event: NewMessage.Event):
