@@ -88,13 +88,13 @@ class Prefect:
     async def entity_ingest_time_trigger(self, wait: float = 600):
         while True:
             if await self.tl.entities_exist:
-                log.info("New scanned entities found to classify.")
                 await self.entity_ingest_trigger()
             await asyncio.sleep(wait)
 
     async def gender_classify_trigger(self, wait: float = 10):
         while True:
             if list(SCANNED_DIR.glob("*.jpg")):
+                log.info("Scanned entities found to classify.")
                 await self.gender_classify.trigger()
             await asyncio.sleep(wait)
 
