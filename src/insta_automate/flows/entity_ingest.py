@@ -13,11 +13,16 @@ from insta_automate.tasks.ia import add_new_entity
 async def entity_ingest():
     log = get_run_logger()
     tl = await IaTelegram.get_client()
+    entity = None
 
     async for msg in tl.iter_entity_messages():
         try:
-            add_new_entity(str(msg.text))
+            entity = add_new_entity(str(msg.text))
         except ValidationError:
             log.error(f"Message(text='{msg.text}') is not a valid entity url.")
         await tl.delete_message(msg)
-    await ia_backup()
+    await ia_backup() if entity else log.error("No entities found to ingest.")
+
+
+if __name__ == "__main__":
+    entity_ingest.serve()
