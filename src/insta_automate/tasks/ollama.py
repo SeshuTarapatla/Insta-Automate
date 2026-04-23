@@ -1,5 +1,3 @@
-from shutil import move
-
 from prefect import get_run_logger
 from sqlmodel import Session
 
@@ -7,6 +5,7 @@ from insta_automate.controllers.ollama import GenderClassifier
 from insta_automate.models.meta import Gender
 from insta_automate.models.scanned import Scanned
 from insta_automate.tasks import ia_task
+from insta_automate.utils import move
 from insta_automate.vars import (
     GENDER_INVALID_DIR,
     GENDER_VALID_DIR,
@@ -32,14 +31,16 @@ def classify(gc: GenderClassifier, session: Session) -> int:
     for i, entity in enumerate(entities, start=1):
         scanned = Scanned.fetch(entity.stem, session)
         scanned.gender = gc.predict(entity).result
-        log.info(f"[{i / total:.2%}] {i}/{total}. @{scanned.id}: {scanned.gender.upper()}")
+        log.info(
+            f"[{i / total:.2%}] {i}/{total}. @{scanned.id}: {scanned.gender.upper()}"
+        )
         session.merge(scanned)
         session.commit()
         match scanned.gender:
             case Gender.FEMALE:
-                move(entity, GENDER_VALID_DIR)
+                move(entity, GENDER_VALID_DIR, replace=True)
             case Gender.MALE:
-                move(entity, GENDER_INVALID_DIR)
+                move(entity, GENDER_INVALID_DIR, replace=True)
             case _:
                 log.error(f"Failed to predict gender of @{scanned.id}")
     return total

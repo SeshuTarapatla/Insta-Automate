@@ -96,6 +96,7 @@ class Prefect:
             if list(SCANNED_DIR.glob("*.jpg")):
                 log.info("Scanned entities found to classify.")
                 await self.gender_classify.trigger()
+                await self.ping_telegram()
             await asyncio.sleep(wait)
 
     async def serve(self):

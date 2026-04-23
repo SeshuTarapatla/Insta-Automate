@@ -1,17 +1,16 @@
 from logging import Logger
 from pathlib import Path
-from shutil import move
 import tarfile
 from typing import Any, Literal, cast
 
 from humanize import naturalsize
 from my_modules.datetime_utils import Timestamp
 from my_modules.logger import get_logger
-from send2trash import send2trash
 from telethon.hints import ProgressCallback
 
 from insta_automate.controllers.postgres import IaPostgres
 from insta_automate.controllers.telegram import IaTelegram
+from insta_automate.utils import move
 from insta_automate.vars import IA_DATABASE, IA_DIR
 
 
@@ -69,8 +68,7 @@ class IaData:
         IaPostgres().restore_db(pg_bkp)
         pg_bkp.unlink()
         ia_bkp.unlink()
-        send2trash(IA_DIR) if IA_DIR.exists() else None
-        move(ia_dir, IA_DIR)
+        move(ia_dir, IA_DIR, replace=True)
 
         self.log.info(
             f"[Database + {self.total} Images] Restore complete. Total time taken: {Timestamp() - started_at}"
