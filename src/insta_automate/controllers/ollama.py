@@ -2,8 +2,9 @@ from pathlib import Path
 from textwrap import dedent
 
 from ollama import Client
+from pydantic import ValidationError
 
-from insta_automate.models.meta import GenderPrediction
+from insta_automate.models.meta import Gender, GenderPrediction
 from insta_automate.vars import OLLAMA_URL, OLLAMA_VL_MODEL
 
 SYSTEM_PROMPT = dedent("""
@@ -43,4 +44,7 @@ class GenderClassifier:
             options={"temperature": 0},
             format=GenderPrediction.model_json_schema(),
         ).response
-        return GenderPrediction.model_validate_json(response)
+        try:
+            return GenderPrediction.model_validate_json(response)
+        except ValidationError:
+            return GenderPrediction(result=Gender.UNDEF)

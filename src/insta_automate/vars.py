@@ -32,3 +32,5 @@ IA_DIR: Path = Path(getenv("IA_DIR", ""))
 OLLAMA_URL: str | None = getenv("OLLAMA_URL")
 OLLAMA_VL_MODEL: str = "qwen3-vl:4b-instruct"
 SCANNED_DIR: Path = IA_DIR / "scanned"
+GENDER_VALID_DIR: Path = IA_DIR / "gender_valid"
+GENDER_INVALID_DIR: Path = IA_DIR / "gender_invalid"
