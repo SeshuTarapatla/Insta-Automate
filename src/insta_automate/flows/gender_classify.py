@@ -30,7 +30,7 @@ async def gender_classify():
         time_taken = Timestamp() - started_at
         await ia_backup()
         log.info(
-            f"Gender classification complete. Total entities processed: {total} at {total / time_taken.total_seconds():.3} img/s rate. Time taken: {time_taken}"
+            f"Gender classification complete. Total entities processed: {total} at {total / (time_taken.total_seconds() or 1):.3} img/s rate. Time taken: {time_taken}"
         )
 
 
