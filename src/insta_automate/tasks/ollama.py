@@ -38,9 +38,9 @@ def classify(gc: GenderClassifier, session: Session) -> int:
         session.commit()
         match scanned.gender:
             case Gender.FEMALE:
-                move(entity, GENDER_VALID_DIR, replace=True)
+                move(entity, GENDER_VALID_DIR / entity.name, replace=True)
             case Gender.MALE:
-                move(entity, GENDER_INVALID_DIR, replace=True)
+                move(entity, GENDER_INVALID_DIR / entity.name, replace=True)
             case _:
                 log.error(f"Failed to predict gender of @{scanned.id}")
     return total
