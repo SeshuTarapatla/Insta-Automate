@@ -37,11 +37,11 @@ async def entity_scan(url: str, list: ScanList = ScanList.AUTO):
         return
     match entity.type:
         case EntityType.PROFILE:
-            status = profile_entity_scan(entity, list=list, session=session)
+            status = profile_entity_scan(entity, list=list, device=device, session=session)
             if status is True and entity.access == EntityAccess.PRIVATE:
                 await notify_profile_unfollow(entity)
         case EntityType.REEL | EntityType.POST:
-            status = post_entity_scan(entity, session=session)
+            status = post_entity_scan(entity, session=session, device=device)
             if status:
                 scan.increment(entity.type, session=session)
         case _:
