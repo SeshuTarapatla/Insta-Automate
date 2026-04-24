@@ -55,6 +55,11 @@ async def tl_init():
     await IaTelegram.ia_init()
 
 
+@tl.async_command(name="cleanup", help="Clean Backup channel removing older backups.")
+async def tl_cleanup(keep: int = Option(3, "-k", "-keep", help="Backup retentions.")):
+    await IaTelegram.clean_backups(keep)
+
+
 @db.command(name="init", help="Initialize Insta Automate PostgreSQL database & tables.")
 def db_init(
     drop: bool = Option(
@@ -62,6 +67,7 @@ def db_init(
     ),
 ):
     IaPostgres.init(drop=drop)
+
 
 @db.async_command(
     name="backup", help="Take backup of Insta Automate database into Telegram."
@@ -73,6 +79,7 @@ async def db_backup():
     await tl.backup(backup)
     backup.unlink()
 
+
 @db.async_command(
     name="restore", help="Restore Insta Automate database from last Telegram backup."
 )
@@ -82,6 +89,7 @@ async def db_restore():
     pg = IaPostgres()
     pg.restore_db(backup)
     backup.unlink()
+
 
 @prefect.async_command(
     name="serve", help="Serve Prefect triggerer and scheduler for Insta Automate flows."

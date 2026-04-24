@@ -18,6 +18,7 @@ from telethon.tl.patched import Message as PatchedMessage
 from telethon.types import (
     Channel,
     ChatAdminRights,
+    DocumentAttributeFilename,
     Message,
     Updates,
 )
@@ -33,7 +34,6 @@ from insta_automate.exceptions import (
 from insta_automate.models.telegram import IaMessages
 from insta_automate.vars import (
     IA_BACKUP_CHANNEL,
-    IA_DATABASE,
     IA_ENTITY_CHANNEL,
     IA_NOTIFY_CHANNEL,
 )
@@ -154,8 +154,8 @@ class UserTelegramClient(BaseTelegramClient):
                 f"Failed to add @{bot_username} as admin to Channel(title='{channel.title}')"
             ) from e
 
-    async def iter_messages_only(self, entity: EntityLike):
-        async for msg in self.iter_messages(entity):
+    async def iter_messages_only(self, entity: EntityLike, offset: int = 0):
+        async for msg in self.iter_messages(entity, add_offset=offset):
             if isinstance(msg, PatchedMessage):
                 yield msg
 
@@ -352,6 +352,27 @@ class IaTelegram(UserTelegramClient):
     @staticmethod
     def channel_str(channel: Channel) -> str:
         return f"Channel(id={channel.id}, title='{channel.title}')"
+
+    @classmethod
+    async def clean_backups(cls, keep: int = 3):
+        if keep < 1:
+            log.error(
+                f"Cannot proceed with Cleanup task. Keep should be >= 1. [bold red]Got {keep}[/]."
+            )
+            exit(1)
+        log.info(f"Insta Automate Clean Backup task | Backup retention: {keep}.")
+        tl = await cls.get_client()
+        async for msg in tl.iter_messages_only(tl.backup_channel, offset=keep):
+            if (
+                msg.document
+                and msg.document.attributes
+                and isinstance(msg.document.attributes[0], DocumentAttributeFilename)
+            ):
+                _msg = f"Message(id={msg.id}, document='{msg.document.attributes[0].file_name}', channel='{IA_BACKUP_CHANNEL}')"
+            else:
+                _msg = f"Message(id={msg.id}, channel='{IA_BACKUP_CHANNEL}')"
+            log.info(f"[red]Deleting[/]: {_msg}")
+            await msg.delete()
 
     @classmethod
     async def ia_init(cls):
