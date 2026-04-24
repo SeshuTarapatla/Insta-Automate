@@ -337,7 +337,9 @@ class IaUI:
         return self.device(description=description)
 
     @staticmethod
-    def height(ui_object: UiObject) -> int:
+    def height(ui_object: UiObject, timeout: int = 5) -> int:
+        if not ui_object.exists(timeout=timeout):
+            return 0
         _, y1, _, y2 = ui_object.bounds()
         return y2 - y1
 
