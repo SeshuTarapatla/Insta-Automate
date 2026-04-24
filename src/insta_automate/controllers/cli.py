@@ -4,7 +4,6 @@ from async_typer import AsyncTyper
 from my_modules.logger import get_logger
 from typer import Option
 
-from insta_automate.controllers.data import IaData
 from insta_automate.controllers.docker import IaDocker
 from insta_automate.controllers.postgres import IaPostgres
 from insta_automate.controllers.prefect import Prefect
@@ -94,13 +93,3 @@ async def prefect_serve():
 @prefect.async_command(name="deploy", help="Deploy all Insta Automate flows.")
 async def prefect_deploy():
     await IaFlows.deploy_all()
-
-
-@ia.async_command(name="backup", help="Take snapshot backup of Insta Automate.")
-async def ia_backup():
-    await IaData().backup()
-
-
-@ia.async_command(name="restore", help="Restore Insta Automate from a backup snapshot.")
-async def ia_restore():
-    await IaData().restore()

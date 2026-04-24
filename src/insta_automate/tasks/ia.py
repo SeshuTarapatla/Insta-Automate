@@ -233,7 +233,7 @@ def post_entity_scan(
         elements = [
             element
             for element in ui.like_container
-            if ui.height(element) == ELEMENT_HEIGHT
+            if ui.height(element, timeout=5) == ELEMENT_HEIGHT
         ]
         for element in elements:
             scanned += 1
