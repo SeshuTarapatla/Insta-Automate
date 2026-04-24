@@ -146,11 +146,14 @@ class IaDevice(Device):
         if entity.type != EntityType.PROFILE or by_url:
             self.open_url(entity.url)
 
-    def swipe_list(self, elements: list[UiObject], duration: float = 1):
+    def swipe_list(
+        self, elements: list[UiObject], duration: float = 1, wait: float = 1
+    ):
         if len(elements) > 1:
             return self.swipe(
                 *elements[-1].center(), *elements[0].center(), duration=duration
             )
+        self.sleep(wait)
 
     @ui_retry
     def switch_account(self, account: Literal["main", "alt"]) -> bool:

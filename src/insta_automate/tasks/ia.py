@@ -229,6 +229,7 @@ def post_entity_scan(
     scanned_set = set()
 
     while True:
+        ui.like_container.must_wait()
         elements = [
             element
             for element in ui.like_container
