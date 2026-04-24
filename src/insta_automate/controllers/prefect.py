@@ -56,7 +56,7 @@ class Prefect:
         while True:
             scan = Scan.fetch(self.session)
             try:
-                if not scan.limit_reached and (
+                if (not scan.limit_reached) and (
                     entities := Entity.fetch_queued_entities(self.session)
                 ):
                     log.info(f"Total entities queued for scan: {len(entities)}")
