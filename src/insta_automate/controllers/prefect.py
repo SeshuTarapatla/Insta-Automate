@@ -71,6 +71,22 @@ class Prefect:
                 self.session.rollback()
             await asyncio.sleep(10)
 
+    async def entity_scan_trigger(self):
+        while True:
+            scan = Scan.fetch(self.session)
+            if scan.limit_reached:
+                await asyncio.sleep(600)
+                continue
+            if entities := Entity.fetch_queued_entities(self.session):
+                log.info(f"Total entities queued for scan: {len(entities)}")
+                log.info(
+                    f"Trigerring scan for:\n{entities[0].model_dump_json(indent=4)}"
+                )
+                self.inet.wait_for_network()
+                await self.wait_for_device()
+                await self.entity_scan.trigger(parameters={"url": entities[0].url})
+            await asyncio.sleep(10)
+
     async def ping_telegram(self):
         log.info("Pinging telegram to keep session alive.")
         await self.tl.start()
@@ -82,7 +98,9 @@ class Prefect:
 
     async def entity_ingest_trigger(self):
         if self.entity_ingest_queued:
-            log.warning("Entity ingest flow is already in queue. Skipping this trigger.")
+            log.warning(
+                "Entity ingest flow is already in queue. Skipping this trigger."
+            )
         else:
             self.entity_ingest_queued = True
             log.info("New entities found to ingest.")
@@ -112,8 +130,8 @@ class Prefect:
 
         asyncio.create_task(self.keep_telegram_alive())
         asyncio.create_task(self.entity_ingest_time_trigger())
+        asyncio.create_task(self.entity_scan_trigger())
         asyncio.create_task(self.gender_classify_trigger())
-        asyncio.create_task(self.ia_flows_trigger())
 
         @self.tl.on(NewMessage(chats=self.tl.entity_channel))
         async def entity_ingest_message_trigger(event: NewMessage.Event):
