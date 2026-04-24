@@ -34,6 +34,7 @@ class Prefect:
         self.entity_ingest = Deployment("entity-ingest")
         self.entity_scan = Deployment("entity-scan")
         self.gender_classify = Deployment("gender-classify")
+        self.entity_ingest_queued: bool = False
 
     async def wait_for_device(self):
         notification: Message = cast(Message, None)
@@ -80,10 +81,15 @@ class Prefect:
             await self.ping_telegram()
 
     async def entity_ingest_trigger(self):
-        log.info("New entities found to ingest.")
-        self.inet.wait_for_network()
-        await self.entity_ingest.trigger()
-        await self.ping_telegram()
+        if self.entity_ingest_queued:
+            log.warning("Entity ingest flow is already in queue. Skipping this trigger.")
+        else:
+            self.entity_ingest_queued = True
+            log.info("New entities found to ingest.")
+            self.inet.wait_for_network()
+            await self.entity_ingest.trigger()
+            await self.ping_telegram()
+            self.entity_ingest_queued = False
 
     async def entity_ingest_time_trigger(self, wait: float = 600):
         while True:
