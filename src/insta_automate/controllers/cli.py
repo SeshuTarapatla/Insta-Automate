@@ -64,6 +64,25 @@ def db_init(
 ):
     IaPostgres.init(drop=drop)
 
+@db.async_command(
+    name="backup", help="Take backup of Insta Automate database into Telegram."
+)
+async def db_backup():
+    pg = IaPostgres()
+    backup = pg.backup_db()
+    tl = await IaTelegram.get_client()
+    await tl.backup(backup)
+    backup.unlink()
+
+@db.async_command(
+    name="restore", help="Restore Insta Automate database from last Telegram backup."
+)
+async def db_restore():
+    tl = await IaTelegram.get_client()
+    backup = await tl.fetch_last_backup()
+    pg = IaPostgres()
+    pg.restore_db(backup)
+    backup.unlink()
 
 @prefect.async_command(
     name="serve", help="Serve Prefect triggerer and scheduler for Insta Automate flows."

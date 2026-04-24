@@ -5,7 +5,7 @@ from prefect import get_run_logger
 
 from insta_automate.controllers.postgres import SessionLocal
 from insta_automate.flows import ia_flow
-from insta_automate.tasks.data import ia_backup
+from insta_automate.tasks.data import db_backup
 from insta_automate.tasks.ollama import classify, get_gc_client
 from insta_automate.vars import GENDER_INVALID_DIR, GENDER_VALID_DIR, SCANNED_DIR
 
@@ -28,7 +28,7 @@ async def gender_classify():
         return
     else:
         time_taken = Timestamp() - started_at
-        await ia_backup()
+        await db_backup()
         log.info(
             f"Gender classification complete. Total entities processed: {total} at {total / (time_taken.total_seconds() or 1):.3} img/s rate. Time taken: {time_taken}"
         )

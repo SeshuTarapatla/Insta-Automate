@@ -9,7 +9,7 @@ from insta_automate.models.entity import Entity
 from insta_automate.models.meta import EntityAccess, EntityStatus, EntityType
 from insta_automate.models.scan import Scan
 from insta_automate.models.scanned import ScanList
-from insta_automate.tasks.data import ia_backup
+from insta_automate.tasks.data import db_backup
 from insta_automate.tasks.ia import (
     determine_entity_access,
     device_ready,
@@ -50,7 +50,7 @@ async def entity_scan(url: str, list: ScanList = ScanList.AUTO, device: IaDevice
     device.lock()
     if status is True:
         scan.increment(entity.type, session=session)
-        await ia_backup()
+        await db_backup()
     if limit := scan.limit_reached:
         await notify_scan_limit_reached(*limit)
 

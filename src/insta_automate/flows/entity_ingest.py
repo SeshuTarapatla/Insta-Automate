@@ -6,7 +6,7 @@ from pydantic import ValidationError
 from insta_automate.controllers.device import IaDevice
 from insta_automate.controllers.telegram import IaTelegram
 from insta_automate.flows import ia_flow
-from insta_automate.tasks.data import ia_backup
+from insta_automate.tasks.data import db_backup
 from insta_automate.tasks.ia import add_new_entity
 
 
@@ -26,7 +26,7 @@ async def entity_ingest():
 
     if entity:
         device.lock()
-        await ia_backup()
+        await db_backup()
     else:
         log.error("No entities found to ingest.")
 
