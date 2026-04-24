@@ -85,7 +85,7 @@ class Entity(SQLModel, table=True):
     def entity_priority_order(cls):
         return (
             case(
-                (cls.access == EntityAccess.PRIVATE, 2),
+                (cls.access == EntityAccess.PRIVATE, 0),
                 (cls.access == EntityAccess.PUBLIC, 1),
             ),
             case(
