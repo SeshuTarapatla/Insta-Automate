@@ -1,4 +1,5 @@
 from my_modules.datetime_utils import Timestamp
+from my_modules.inet import Internet
 from prefect import get_run_logger
 from sqlmodel import Session
 
@@ -28,6 +29,32 @@ def switch_account_for_entity(entity: Entity, device: IaDevice | None = None) ->
     device = device or IaDevice()
     log.info(f"Switching to {account.upper()} account.")
     return device.switch_account(account)
+
+
+@ia_task()
+async def network_access(object: Internet | IaDevice | None = None):
+    def wait_for_network():
+        log.error("Internet disconnected. Awaiting for network...")
+        wait_method()
+        log.info("Internet is back. Network access active.")
+
+    log = get_run_logger()
+    object = object or Internet()
+    if isinstance(object, Internet):
+        wait_method = object.wait_for_network
+        if not object.is_active:
+            wait_for_network()
+    elif isinstance(object, IaDevice):
+        wait_method = object.wait_for_network
+        if not object.inet.is_active:
+            wait_for_network()
+
+
+async def ensure_network(self, object: Internet | IaDevice | None = None):
+    object = object or Internet()
+    inet = object.inet if isinstance(object, IaDevice) else object
+    if not inet.is_active:
+        await network_access(object)
 
 
 @ia_task()
@@ -88,7 +115,7 @@ def add_new_entity(url: str, device: IaDevice | None = None) -> Entity:
 
 
 @ia_task()
-def profile_entity_scan(
+async def profile_entity_scan(
     entity: Entity,
     list: ScanList = ScanList.AUTO,
     *,
@@ -165,7 +192,7 @@ def profile_entity_scan(
                     f"[{added}/{scanned}] @{current} | Exported to: {jpeg.relative_to(IA_DIR)}"
                 )
         entity.update(session)
-        device._wait_for_network()
+        await ensure_network(device)
         device.swipe_list(elements)
         while True:
             try:
@@ -192,7 +219,7 @@ def profile_entity_scan(
 
 
 @ia_task()
-def post_entity_scan(
+async def post_entity_scan(
     entity: Entity, device: IaDevice | None = None, session: Session | None = None
 ):
     started = Timestamp()
@@ -251,7 +278,7 @@ def post_entity_scan(
                     f"[{added}/{scanned}] @{current} | Exported to: {jpeg.relative_to(IA_DIR)}"
                 )
         entity.update(session)
-        device._wait_for_network()
+        await ensure_network(device)
         device.swipe_list(elements)
         if current == last:
             break

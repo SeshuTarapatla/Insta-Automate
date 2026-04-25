@@ -50,8 +50,11 @@ class IaDevice(Device):
         self.current_user: Literal["main", "alt"] = "alt"
         self.inet = Internet()
 
-    def _wait_for_network(self):
-        return self.inet.wait_for_network()
+    def wait_for_network(self, buffer: float = 10, unlock: bool = True):
+        if self.inet.wait_for_network():
+            self.sleep(buffer)
+        if unlock and self.locked:
+            self.unlock()
 
     def lock(self):
         self.screen_off()
@@ -124,7 +127,7 @@ class IaDevice(Device):
         return True
 
     def open_url(self, url: str, wait: float = 1):
-        self._wait_for_network()
+        self.wait_for_network()
         super().open_url(url)
         sleep(wait)
 
@@ -157,7 +160,7 @@ class IaDevice(Device):
 
     @ui_retry
     def switch_account(self, account: Literal["main", "alt"]) -> bool:
-        self._wait_for_network()
+        self.wait_for_network()
         match account:
             case "main":
                 self.current_user = "main"
@@ -189,7 +192,7 @@ class IaDevice(Device):
     def determine_entity_access(
         self, entity: Entity, timeout: float = 30
     ) -> EntityAccess:
-        self._wait_for_network()
+        self.wait_for_network()
         self.switch_account("alt")
         self.open_entity(entity)
         match entity.type:
@@ -208,7 +211,7 @@ class IaDevice(Device):
 
     def _profile_entity_access(self, timeout: float = 30) -> EntityAccess | None:
         started_at = Timestamp()
-        self._wait_for_network()
+        self.wait_for_network()
         while (Timestamp() - started_at).seconds <= timeout:
             if (
                 self.ui.private_account_banner.exists
@@ -220,7 +223,7 @@ class IaDevice(Device):
 
     def _post_entity_access(self, timeout: float = 30) -> EntityAccess | None:
         started_at = Timestamp()
-        self._wait_for_network()
+        self.wait_for_network()
         while (Timestamp() - started_at).seconds <= timeout:
             if (
                 self.ui.private_account_banner.exists
@@ -239,7 +242,7 @@ class IaDevice(Device):
                 resourceId="com.instagram.android:id/clips_author_username"
             ).get_text()
 
-        self._wait_for_network()
+        self.wait_for_network()
         author1 = _reel_author()
         self.open_url(url)
         author2 = _reel_author()
