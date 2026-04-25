@@ -52,32 +52,13 @@ class Prefect:
         self.device.sleep(1)
         self.device.lock()
 
-    async def ia_flows_trigger(self):
-        while True:
-            scan = Scan.fetch(self.session)
-            try:
-                if (not scan.limit_reached) and (
-                    entities := Entity.fetch_queued_entities(self.session)
-                ):
-                    log.info(f"Total entities queued for scan: {len(entities)}")
-                    log.info(
-                        f"Trigerring scan for:\n{entities[0].model_dump_json(indent=4)}"
-                    )
-                    self.inet.wait_for_network()
-                    await self.wait_for_device()
-                    await self.entity_scan.trigger(parameters={"url": entities[0].url})
-            except Exception as e:
-                log.error(f"IA Flows trigger exception: {e}")
-                self.session.rollback()
-            await asyncio.sleep(10)
-
     async def entity_scan_trigger(self):
         while True:
             scan = Scan.fetch(self.session)
             if scan.limit_reached:
                 await asyncio.sleep(600)
                 continue
-            if entities := Entity.fetch_queued_entities(self.session):
+            elif entities := Entity.fetch_queued_entities(self.session):
                 log.info(f"Total entities queued for scan: {len(entities)}")
                 log.info(
                     f"Trigerring scan for:\n{entities[0].model_dump_json(indent=4)}"
