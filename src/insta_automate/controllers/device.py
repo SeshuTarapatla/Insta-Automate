@@ -295,6 +295,9 @@ class IaUI:
         self.profile_following = self.resourceId(
             "profile_header_familiar_following_value"
         )
+        self.profile_follow_button = self.resourceId(
+            "profile_header_user_action_follow_button"
+        )
         self.profile_header = self.resourceId("profile_header_container")
         self.profile_id = self.action_bar_title
         self.profile_name = self.resourceId("profile_header_full_name_above_vanity")
@@ -310,6 +313,9 @@ class IaUI:
             "direct_private_share_action_bar_container_view"
         )
         self.suggested_for_you = self.text("Suggested for you")
+        self.profile_page = self.resourceId("layout_container_main")
+        self.profile_avatar = self.resourceId("profile_header_avatar_container_top_left_stub")
+        self.profile_avatar_expanded = self.content("Profile picture")
 
     def pin_digit(self, digit: int | str) -> UiObject:
         return self.device(self._resourceId("vivo_digit_text", "system"), str(digit))

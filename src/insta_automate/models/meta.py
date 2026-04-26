@@ -42,10 +42,11 @@ class ScanList(StrEnum):
 
 
 @dataclass(frozen=True)
-class ScanLimit:
+class DailyLimit:
     PROFILES = 10
     REELS = 30
     POSTS = 30
+    SCRAPE = 100
 
 
 class AccessPrediction(BaseModel):

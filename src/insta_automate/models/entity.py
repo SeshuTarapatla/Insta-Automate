@@ -82,6 +82,10 @@ class Entity(SQLModel, table=True):
         return cls.model_validate(cls(url=url))
 
     @classmethod
+    def from_id(cls, id: str):
+        return cls.model_validate(cls(url=f"https://www.instagram.com/{id}"))
+
+    @classmethod
     def entity_priority_order(cls):
         return (
             case(
