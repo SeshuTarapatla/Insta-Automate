@@ -33,7 +33,7 @@ class Prefect:
 
         self.entity_ingest = Deployment("entity-ingest")
         self.entity_scan = Deployment("entity-scan")
-        self.gender_classify = Deployment("gender-classify")
+        self.ai_classify = Deployment("ai-classify")
         self.entity_ingest_queued: bool = False
 
     async def wait_for_device(self):
@@ -96,11 +96,11 @@ class Prefect:
                 await self.entity_ingest_trigger()
             await asyncio.sleep(wait)
 
-    async def gender_classify_trigger(self, wait: float = 10):
+    async def ai_classify_trigger(self, wait: float = 10):
         while True:
             if list(SCANNED_DIR.glob("*.jpg")):
                 log.info("Scanned entities found to classify.")
-                await self.gender_classify.trigger()
+                await self.ai_classify.trigger()
                 await self.ping_telegram()
             await asyncio.sleep(wait)
 
@@ -112,7 +112,7 @@ class Prefect:
         asyncio.create_task(self.keep_telegram_alive())
         asyncio.create_task(self.entity_ingest_time_trigger())
         asyncio.create_task(self.entity_scan_trigger())
-        asyncio.create_task(self.gender_classify_trigger())
+        asyncio.create_task(self.ai_classify_trigger())
 
         @self.tl.on(NewMessage(chats=self.tl.entity_channel))
         async def entity_ingest_message_trigger(event: NewMessage.Event):
