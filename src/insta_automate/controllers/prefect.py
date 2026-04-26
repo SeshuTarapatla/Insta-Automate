@@ -53,6 +53,7 @@ class Prefect:
         self.device.lock()
 
     async def entity_scan_trigger(self):
+        await self.wait_for_device()
         while True:
             scan = Scan.fetch(self.session)
             if scan.limit_reached:
@@ -83,6 +84,7 @@ class Prefect:
                 "Entity ingest flow is already in queue. Skipping this trigger."
             )
         else:
+            await self.wait_for_device()
             self.entity_ingest_queued = True
             log.info("New entities found to ingest.")
             self.inet.wait_for_network()
