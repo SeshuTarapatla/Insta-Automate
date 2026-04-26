@@ -1,12 +1,12 @@
-
 from sqlmodel import Field, Session, SQLModel, select
 
-from insta_automate.models.meta import Gender
+from insta_automate.models.meta import EntityAccess, Gender
 
 
 class Scanned(SQLModel, table=True):
     id: str = Field(primary_key=True)
     root: str
+    access: EntityAccess = EntityAccess.UNDEF
     gender: Gender = Gender.UNDEF
 
     @classmethod
