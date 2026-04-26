@@ -108,7 +108,6 @@ class Prefect:
 
     async def serve(self):
         await self.tl.start()
-        await self.wait_for_device()
         log.info("Insta Automate Scheduler and Trigerrer started!")
 
         asyncio.create_task(self.keep_telegram_alive())
