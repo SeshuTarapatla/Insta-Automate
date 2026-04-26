@@ -13,6 +13,7 @@ class EntityType(StrEnum):
 class EntityAccess(StrEnum):
     PUBLIC = auto()
     PRIVATE = auto()
+    UNDEF = auto()
 
 
 class EntityStatus(StrEnum):
@@ -41,7 +42,9 @@ class ScanLimit:
     POSTS = 30
 
 
+class AccessPrediction(BaseModel):
+    result: EntityAccess
+
+
 class GenderPrediction(BaseModel):
     result: Gender
-
-

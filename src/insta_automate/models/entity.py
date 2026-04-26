@@ -17,7 +17,7 @@ class Entity(SQLModel, table=True):
     url: str = Field(primary_key=True)
     id: str = Field(default=None)
     type: EntityType = Field(default=None)
-    access: EntityAccess = Field(default=EntityAccess.PRIVATE)
+    access: EntityAccess = Field(default=EntityAccess.UNDEF)
     added_on: datetime = Field(default_factory=now)
     updated_on: datetime = Field(
         default_factory=now, sa_column_kwargs={"onupdate": now}
