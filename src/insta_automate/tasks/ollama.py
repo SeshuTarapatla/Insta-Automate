@@ -17,8 +17,6 @@ from insta_automate.vars import (
     GENDER_INVALID_DIR,
     GENDER_VALID_DIR,
     OLLAMA_VL_MODEL,
-    PRIVATE_DIR,
-    PUBLIC_DIR,
     SCANNED_DIR,
 )
 
@@ -35,14 +33,12 @@ def get_ai_client(classifier: type[T]) -> T:
 
 
 @ia_task()
-def access_classify(session: Session | None = None):
+def remove_public(session: Session | None = None) -> tuple[int, int, int]:
     log = get_run_logger()
     session = session or SessionLocal()
     classifier = get_ai_client(AccessClassifier)
     entities = list(SCANNED_DIR.glob("*.jpg"))
 
-    PUBLIC_DIR.mkdir(exist_ok=True, parents=True)
-    PRIVATE_DIR.mkdir(exist_ok=True, parents=True)
     total, public, private, failed = len(entities), 0, 0, 0
 
     for i, entity in enumerate(entities, start=1):
@@ -56,29 +52,29 @@ def access_classify(session: Session | None = None):
         match scanned.access:
             case EntityAccess.PRIVATE:
                 private += 1
-                move(entity, PRIVATE_DIR / entity.name, replace=True)
             case EntityAccess.PUBLIC:
                 public += 1
-                move(entity, PUBLIC_DIR / entity.name, replace=True)
+                entity.unlink()
             case _:
                 failed += 1
                 log.error(f"Failed to predict access of @{scanned.id}")
     log.info(
         f"Total entities parsed: {total}. Stats: PRIVATE={private}, PUBLIC={public}, FAILED={failed}"
     )
+    return private, public, total
 
 
 @ia_task()
-def gender_classify(session: Session | None = None):
+def gender_classify(session: Session | None = None) -> tuple[int, int, int]:
     log = get_run_logger()
     session = session or SessionLocal()
     classifier = get_ai_client(GenderClassifier)
-    entities = list(PRIVATE_DIR.glob("*.jpg"))
+    entities = list(SCANNED_DIR.glob("*.jpg"))
 
     GENDER_VALID_DIR.mkdir(exist_ok=True, parents=True)
     GENDER_INVALID_DIR.mkdir(exist_ok=True, parents=True)
     total, male, female, failed = len(entities), 0, 0, 0
-    
+
     for i, entity in enumerate(entities, start=1):
         scanned = Scanned.fetch(entity.stem, session)
         scanned.gender = classifier.predict(entity).result
@@ -100,3 +96,4 @@ def gender_classify(session: Session | None = None):
     log.info(
         f"Total entities parsed: {total}. Stats: FEMALE={female}, MALE={male}, FAILED={failed}"
     )
+    return female, male, total
