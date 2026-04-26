@@ -212,3 +212,4 @@ __marimo__/
 *.tar.gz
 Dockerfile
 dump.xml
+client
