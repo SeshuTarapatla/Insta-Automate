@@ -8,7 +8,7 @@ from insta_automate.flows import ia_flow
 from insta_automate.models.entity import Entity
 from insta_automate.models.meta import EntityAccess, EntityStatus, EntityType
 from insta_automate.models.scan import Scan
-from insta_automate.models.scanned import ScanList
+from insta_automate.models.meta import ScanList
 from insta_automate.tasks.data import db_backup
 from insta_automate.tasks.ia import (
     determine_entity_access,

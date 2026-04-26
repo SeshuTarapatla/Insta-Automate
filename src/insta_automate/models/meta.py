@@ -35,6 +35,12 @@ class Gender(StrEnum):
     UNDEF = auto()
 
 
+class ScanList(StrEnum):
+    FOLLOWERS = auto()
+    FOLLOWING = auto()
+    AUTO = auto()
+
+
 @dataclass(frozen=True)
 class ScanLimit:
     PROFILES = 10

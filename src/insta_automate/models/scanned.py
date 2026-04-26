@@ -1,14 +1,7 @@
-from enum import StrEnum, auto
 
 from sqlmodel import Field, Session, SQLModel, select
 
 from insta_automate.models.meta import Gender
-
-
-class ScanList(StrEnum):
-    FOLLOWERS = auto()
-    FOLLOWING = auto()
-    AUTO = auto()
 
 
 class Scanned(SQLModel, table=True):

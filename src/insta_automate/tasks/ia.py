@@ -7,8 +7,8 @@ from insta_automate.controllers.device import IaDevice
 from insta_automate.controllers.postgres import SessionLocal
 from insta_automate.exceptions import InvalidEntity
 from insta_automate.models.entity import Entity
-from insta_automate.models.meta import EntityAccess, EntityStatus, EntityType
-from insta_automate.models.scanned import ScanList, Scanned
+from insta_automate.models.meta import EntityAccess, EntityStatus, EntityType, ScanList
+from insta_automate.models.scanned import Scanned
 from insta_automate.models.user import User
 from insta_automate.tasks import ia_task
 from insta_automate.vars import ELEMENT_HEIGHT, IA_DIR, SCANNED_DIR
