@@ -46,7 +46,7 @@ class Limit:
     PROFILES = 10
     REELS = 30
     POSTS = 30
-    SCRAPE = 100
+    SCRAPE = 200
     SCRAPE_BATCH = 10
 
 

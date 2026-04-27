@@ -1,4 +1,6 @@
-import random
+"""A flow that scrapes the selected users in queue directory."""
+
+from random import choice
 
 from my_modules.datetime_utils import Timestamp
 from prefect import get_run_logger
@@ -28,10 +30,10 @@ async def entity_scrape(batch_length: int = Limit.SCRAPE_BATCH):
         session = SessionLocal()
         device = device_ready()
         scrape = Scrape.fetch(session)
-        batch = random.sample(images, min(batch_length, len(images)))
-        log.info(f"A random batch of length={len(batch)} is chosen for scrape.")
         switch_account("alt", device)
-        for image in batch:
+        while scrape.scraped < Limit.SCRAPE_BATCH:
+            image = choice(images)
+            log.info(f"{scrape.scraped+1}/{Limit.SCRAPE_BATCH}: @{image.stem}: Scrape triggered")
             if await profile_scrape(image.stem, device=device, session=session):
                 scrape.increment(session=session)
             image.unlink()
