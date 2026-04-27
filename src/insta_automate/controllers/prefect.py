@@ -2,6 +2,7 @@ import asyncio
 from inspect import isawaitable
 from typing import Any, cast
 
+from my_modules.datetime_utils import Timestamp
 from my_modules.helpers import handle_await
 from my_modules.inet import Internet
 from my_modules.logger import get_logger
@@ -11,6 +12,7 @@ from prefect.deployments import run_deployment
 from prefect.flow_runs import wait_for_flow_run
 from telethon.events import NewMessage
 from telethon.types import Message
+from datetime import date
 
 from insta_automate.controllers.device import IaDevice
 from insta_automate.controllers.postgres import SessionLocal
@@ -105,21 +107,6 @@ class Prefect:
         self.device.sleep(1)
         self.device.lock()
 
-    async def entity_scan_trigger(self):
-        while True:
-            scan = Scan.fetch(self.session)
-            if scan.limit_reached:
-                await asyncio.sleep(600)
-                continue
-            elif entities := Entity.fetch_queued_entities(self.session):
-                log.info(f"Total entities queued for scan: {len(entities)}")
-                log.info(
-                    f"Trigerring scan for:\n{entities[0].model_dump_json(indent=4)}"
-                )
-                self.inet.wait_for_network()
-                await self.entity_scan.trigger(parameters={"url": entities[0].url})
-            await asyncio.sleep(10)
-
     async def ping_telegram(self):
         log.info("Pinging telegram to keep session alive.")
         await self.tl.start()
@@ -128,6 +115,24 @@ class Prefect:
         while True:
             await asyncio.sleep(wait)
             await self.ping_telegram()
+
+    async def wait_day_change(self, date: date):
+        while date == Timestamp().date():
+            await asyncio.sleep(60)
+
+    async def entity_scan_trigger(self):
+        while True:
+            scan = Scan.fetch(self.session)
+            if scan.limit_reached:
+                await self.wait_day_change(Timestamp().date())
+            elif entities := Entity.fetch_queued_entities(self.session):
+                log.info(f"Total entities queued for scan: {len(entities)}")
+                log.info(
+                    f"Trigerring scan for:\n{entities[0].model_dump_json(indent=4)}"
+                )
+                self.inet.wait_for_network()
+                await self.entity_scan.trigger(parameters={"url": entities[0].url})
+            await asyncio.sleep(10)
 
     async def entity_ingest_trigger(self):
         if self.entity_ingest_queued:
@@ -160,7 +165,7 @@ class Prefect:
         while True:
             scrape = Scrape.fetch(self.session)
             if scrape.limit_reached:
-                continue
+                await self.wait_day_change(Timestamp().date())
             elif list(SCRAPE_QUEUE_DIR.glob("*.jpg")):
                 log.info("Queued entities found to scrape.")
                 await self.entity_scrape.trigger()
@@ -176,7 +181,7 @@ class Prefect:
         asyncio.create_task(self.entity_scan_trigger())
         asyncio.create_task(self.ai_classify_trigger())
         asyncio.create_task(self.entity_scrape_trigger())
-        
+
         log.info("Insta Automate Scheduler and Trigerrer started!")
 
         @self.tl.on(NewMessage(chats=self.tl.entity_channel))
