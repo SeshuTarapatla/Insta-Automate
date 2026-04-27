@@ -17,10 +17,62 @@ from insta_automate.controllers.postgres import SessionLocal
 from insta_automate.controllers.telegram import IaTelegram
 from insta_automate.models.entity import Entity
 from insta_automate.models.scan import Scan
+from insta_automate.models.scrape import Scrape
 from insta_automate.models.telegram import IaMessages
-from insta_automate.vars import SCANNED_DIR
+from insta_automate.vars import SCANNED_DIR, SCRAPE_QUEUE_DIR
 
 log = get_logger(__name__)
+
+
+class Deployment:
+    def __init__(self, flow: str, deployment: str | None = None) -> None:
+        self.flow = flow
+        self.deployment = f"{deployment or flow}/{flow}"
+
+    def __repr__(self) -> str:
+        return f"Deployment('{self.deployment}')"
+
+    def __str__(self) -> str:
+        return self.__repr__()
+
+    async def trigger(
+        self, wait: bool = True, parameters: dict[str, Any] = {}, retries: int = 3
+    ) -> FlowRun | None:
+        attempt = 1
+        while attempt <= retries:
+            try:
+                log.info(f"Triggering: {self} - attempt {attempt}")
+                flow_run = run_deployment(
+                    self.deployment, timeout=0, parameters=parameters
+                )
+                self.flow_run = await flow_run if isawaitable(flow_run) else flow_run
+                log.info("Trigger successful.")
+                if wait:
+                    await self.log_status()
+                else:
+                    asyncio.create_task(self.log_status())
+                return self.flow_run
+            except Exception:
+                log.error(f"Trigger attempt {attempt} failed. Retrying...")
+                attempt += 1
+        return None
+
+    async def log_status(self) -> None:
+        while True:
+            try:
+                self.flow_run = await wait_for_flow_run(self.flow_run.id)
+                if isinstance(self.flow_run.state, State):
+                    if self.flow_run.state.type == StateType.COMPLETED:
+                        log.info(f"{self} run completed.")
+                    else:
+                        log.error(
+                            f"{self} run failed with status: [bold red]{self.flow_run.state.type.value}[/]"
+                        )
+                else:
+                    log.error(f"{self} run completed with UNKNOWN status.")
+                return
+            except Exception:
+                pass
 
 
 class Prefect:
@@ -34,6 +86,7 @@ class Prefect:
         self.entity_ingest = Deployment("entity-ingest")
         self.entity_scan = Deployment("entity-scan")
         self.ai_classify = Deployment("ai-classify")
+        self.entity_scrape = Deployment("entity-scrape")
         self.entity_ingest_queued: bool = False
 
     async def wait_for_device(self):
@@ -106,6 +159,18 @@ class Prefect:
                 await self.ping_telegram()
             await asyncio.sleep(wait)
 
+    async def entity_scrape_trigger(self, wait: float = 600):
+        while True:
+            scrape = Scrape.fetch(self.session)
+            if scrape.limit_reached:
+                continue
+            elif list(SCRAPE_QUEUE_DIR.glob("*.jpg")):
+                log.info("Queued entities found to scrape.")
+                await self.wait_for_device()
+                await self.entity_scrape.trigger()
+                await self.ping_telegram()
+            await asyncio.sleep(wait)
+
     async def serve(self):
         await self.tl.start()
         log.info("Insta Automate Scheduler and Trigerrer started!")
@@ -114,60 +179,10 @@ class Prefect:
         asyncio.create_task(self.entity_ingest_time_trigger())
         asyncio.create_task(self.entity_scan_trigger())
         asyncio.create_task(self.ai_classify_trigger())
+        asyncio.create_task(self.entity_scrape_trigger())
 
         @self.tl.on(NewMessage(chats=self.tl.entity_channel))
         async def entity_ingest_message_trigger(event: NewMessage.Event):
             await self.entity_ingest_trigger()
 
         await handle_await(self.tl.run_until_disconnected())
-
-
-class Deployment:
-    def __init__(self, flow: str, deployment: str | None = None) -> None:
-        self.flow = flow
-        self.deployment = f"{deployment or flow}/{flow}"
-
-    def __repr__(self) -> str:
-        return f"Deployment('{self.deployment}')"
-
-    def __str__(self) -> str:
-        return self.__repr__()
-
-    async def trigger(
-        self, wait: bool = True, parameters: dict[str, Any] = {}, retries: int = 3
-    ) -> FlowRun | None:
-        attempt = 1
-        while attempt <= retries:
-            try:
-                log.info(f"Triggering: {self} - attempt {attempt}")
-                flow_run = run_deployment(
-                    self.deployment, timeout=0, parameters=parameters
-                )
-                self.flow_run = await flow_run if isawaitable(flow_run) else flow_run
-                log.info("Trigger successful.")
-                if wait:
-                    await self.log_status()
-                else:
-                    asyncio.create_task(self.log_status())
-                return self.flow_run
-            except Exception:
-                log.error(f"Trigger attempt {attempt} failed. Retrying...")
-                attempt += 1
-        return None
-
-    async def log_status(self) -> None:
-        while True:
-            try:
-                self.flow_run = await wait_for_flow_run(self.flow_run.id)
-                if isinstance(self.flow_run.state, State):
-                    if self.flow_run.state.type == StateType.COMPLETED:
-                        log.info(f"{self} run completed.")
-                    else:
-                        log.error(
-                            f"{self} run failed with status: [bold red]{self.flow_run.state.type.value}[/]"
-                        )
-                else:
-                    log.error(f"{self} run completed with UNKNOWN status.")
-                return
-            except Exception:
-                pass

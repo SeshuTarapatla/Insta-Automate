@@ -1,5 +1,9 @@
+from pathlib import Path
+from typing import Literal
+
 from my_modules.datetime_utils import Timestamp
 from my_modules.inet import Internet
+from PIL import Image
 from prefect import get_run_logger
 from sqlmodel import Session
 
@@ -11,7 +15,7 @@ from insta_automate.models.meta import EntityAccess, EntityStatus, EntityType, S
 from insta_automate.models.scanned import Scanned
 from insta_automate.models.user import User
 from insta_automate.tasks import ia_task
-from insta_automate.vars import ELEMENT_HEIGHT, IA_DIR, SCANNED_DIR
+from insta_automate.vars import ELEMENT_HEIGHT, IA_DIR, SCANNED_DIR, SCRAPED_DIR
 
 
 @ia_task()
@@ -23,12 +27,19 @@ def device_ready() -> IaDevice:
 
 
 @ia_task()
-def switch_account_for_entity(entity: Entity, device: IaDevice | None = None) -> bool:
-    account = "alt" if entity.access == EntityAccess.PUBLIC else "main"
+def switch_account(
+    account: Literal["alt", "main"], device: IaDevice | None = None
+) -> bool:
     log = get_run_logger()
     device = device or IaDevice()
     log.info(f"Switching to {account.upper()} account.")
     return device.switch_account(account)
+
+
+@ia_task()
+def switch_account_for_entity(entity: Entity, device: IaDevice | None = None) -> bool:
+    account = "alt" if entity.access == EntityAccess.PUBLIC else "main"
+    return switch_account(account, device)
 
 
 @ia_task()
@@ -50,11 +61,12 @@ async def network_access(object: Internet | IaDevice | None = None):
             wait_for_network()
 
 
-async def ensure_network(self, object: Internet | IaDevice | None = None):
+async def ensure_network(object: Internet | IaDevice | None = None) -> bool:
     object = object or Internet()
     inet = object.inet if isinstance(object, IaDevice) else object
     if not inet.is_active:
         await network_access(object)
+    return True
 
 
 @ia_task()
@@ -292,3 +304,75 @@ async def post_entity_scan(
     )
     device.press("back")
     return True
+
+
+@ia_task()
+async def profile_scrape(
+    image: Path, device: IaDevice | None = None, session: Session | None = None
+):
+    log = get_run_logger()
+    device = device or IaDevice()
+    session = session or SessionLocal()
+    ui = device.ui
+    inet = Internet()
+
+    if not image.exists():
+        log.error(f"Given image for scrape: {image} doesn't exists.")
+        return
+
+    await ensure_network(device)
+
+    id = image.stem
+    entity = Entity.from_id(id)
+
+    while True:
+        log.info(f"Scraping profile: @{id}")
+        device.open_entity(entity)
+        if ui.profile_id.wait(timeout=5):
+            break
+        elif not inet.is_active:
+            await ensure_network(device)
+        else:
+            log.error(f"@{id}: Profile not found")
+            image.unlink()
+            return
+
+    user = User.from_ui(ui, session)
+    if access := device._profile_entity_access():
+        user.access = access
+    user.update(session)
+
+    if user.access == EntityAccess.PUBLIC:
+        log.error(
+            f"@{id} access is found out to be: {EntityAccess.PUBLIC.upper()}. Skipping scrape."
+        )
+        image.unlink()
+        return
+
+    profile_page = ui.profile_page.screenshot()
+    crop_height = int(ui.profile_follow_button.center()[-1])
+    profile_header = profile_page.crop((0, 0, profile_page.width, crop_height))
+    width, height = profile_header.size
+
+    dp = ui.profile_avatar_small.screenshot()
+    dp_try = 0
+    while dp_try <= 3:
+        dp_try += 1
+        ui.profile_avatar.long_click()
+        ui.sleep()
+        if ui.profile_avatar_expanded.wait(timeout=5):
+            dp = ui.profile_avatar_expanded.screenshot()
+            break
+    dp_resized = dp.resize((width, width), Image.Resampling.LANCZOS)
+    height += dp_resized.height
+
+    profile_report = Image.new("RGB", (width, height))
+    profile_report.paste(dp_resized)
+    profile_report.paste(profile_header, (0, dp_resized.height))
+
+    output = SCRAPED_DIR / f"{id}.jpg"
+    profile_report.save(output)
+    log.info(f"Scrape exported to {output}")
+    image.unlink()
+
+    device.press("back")

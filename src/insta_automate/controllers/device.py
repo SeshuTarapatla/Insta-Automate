@@ -135,10 +135,11 @@ class IaDevice(Device):
         by_url = False
         if entity.type == EntityType.PROFILE:
             self._ia_home()
-            if not self.ui.search_tab.exists:
-                self.app_restart()
-                self.ui.search_tab.must_wait()
-            self.ui.search_tab.click()
+            if not self.ui.search_bar.exists:
+                if not self.ui.search_tab.exists:
+                    self.app_restart()
+                    self.ui.search_tab.must_wait()
+                self.ui.search_tab.click()
             self.ui.search_bar.click()
             self.send_keys(entity.id, clear=True)
             self.sleep(1)
@@ -314,11 +315,16 @@ class IaUI:
         )
         self.suggested_for_you = self.text("Suggested for you")
         self.profile_page = self.resourceId("layout_container_main")
-        self.profile_avatar = self.resourceId("profile_header_avatar_container_top_left_stub")
+        self.profile_avatar = self.resourceId(
+            "profile_header_avatar_container_top_left_stub"
+        )
         self.profile_avatar_expanded = self.content("Profile picture")
 
     def pin_digit(self, digit: int | str) -> UiObject:
         return self.device(self._resourceId("vivo_digit_text", "system"), str(digit))
+
+    def sleep(self, seconds: float = 1):
+        self.device.sleep(seconds)
 
     @staticmethod
     def _resourceId(
@@ -372,5 +378,15 @@ class IaUI:
             if x1 < element.center()[0] < x2:
                 return element
         if (element := self.device(textContains="Liked by")).exists:
+            return element
+        raise Exception
+
+    @property
+    def profile_avatar_small(self) -> UiObject:
+        if (element := self.resourceId("profilePic")).exists:
+            return element
+        elif (
+            element := self.profile_avatar.child(description="Profile picture")
+        ).exists:
             return element
         raise Exception

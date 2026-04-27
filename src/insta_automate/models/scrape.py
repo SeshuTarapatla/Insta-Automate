@@ -3,7 +3,7 @@ from datetime import date as date_, datetime
 from my_modules.datetime_utils import Timestamp
 from sqlmodel import Field, SQLModel, Session, select
 
-from insta_automate.models.meta import DailyLimit
+from insta_automate.models.meta import Limit
 
 
 class Scrape(SQLModel, table=True):
@@ -29,4 +29,4 @@ class Scrape(SQLModel, table=True):
 
     @property
     def limit_reached(self) -> bool:
-        return self.scraped >= DailyLimit.SCRAPE
+        return self.scraped >= Limit.SCRAPE

@@ -1,4 +1,4 @@
-from insta_automate.models.meta import EntityType, DailyLimit
+from insta_automate.models.meta import EntityType, Limit
 
 
 from my_modules.datetime_utils import Timestamp
@@ -11,9 +11,9 @@ from typing import Literal
 
 class Scan(SQLModel, table=True):
     date: date_ = Field(primary_key=True, default_factory=lambda: Timestamp().date())
-    profiles: int = Field(default=0, ge=0, le=DailyLimit.PROFILES)
-    reels: int = Field(default=0, ge=0, le=DailyLimit.REELS)
-    posts: int = Field(default=0, ge=0, le=DailyLimit.POSTS)
+    profiles: int = Field(default=0, ge=0, le=Limit.PROFILES)
+    reels: int = Field(default=0, ge=0, le=Limit.REELS)
+    posts: int = Field(default=0, ge=0, le=Limit.POSTS)
     added_on: datetime = Field(default_factory=Timestamp)
     updated_on: datetime = Field(
         default_factory=Timestamp, sa_column_kwargs={"onupdate": Timestamp}
@@ -44,9 +44,9 @@ class Scan(SQLModel, table=True):
     def limit_reached(
         self,
     ) -> tuple[date_, Literal["profiles", "reels", "posts"], int] | None:
-        if self.profiles >= DailyLimit.PROFILES:
+        if self.profiles >= Limit.PROFILES:
             return self.date, "profiles", self.profiles
-        elif self.reels >= DailyLimit.REELS:
+        elif self.reels >= Limit.REELS:
             return self.date, "reels", self.reels
-        elif self.posts >= DailyLimit.POSTS:
+        elif self.posts >= Limit.POSTS:
             return self.date, "posts", self.posts

@@ -1,10 +1,11 @@
 from datetime import datetime
 
 from my_modules.datetime_utils import now
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, SQLModel, Session
 
 from insta_automate.controllers.device import IaUI
 from insta_automate.models.meta import EntityAccess
+from insta_automate.models.scanned import Scanned
 from insta_automate.utils import ia_int
 
 
@@ -23,7 +24,7 @@ class User(SQLModel, table=True):
     added_on: datetime = Field(default_factory=now)
 
     @classmethod
-    def from_ui(cls, ui: IaUI):
+    def from_ui(cls, ui: IaUI, session: Session | None = None):
         id = ui.profile_id.get_text()
         name = name.get_text() if (name := ui.profile_name).exists else ""
         bio = bio.get_text() if (bio := ui.profile_bio).exists else ""
@@ -33,10 +34,14 @@ class User(SQLModel, table=True):
         p = ia_int(posts)
         f1 = ia_int(followers)
         f2 = ia_int(following)
+        if session:
+            root = Scanned.fetch(id, session).root
+        else:
+            root = id
         return cls.model_validate(
             cls(
                 id=id,
-                root=id,
+                root=root,
                 name=name,
                 bio=bio,
                 posts=posts,
@@ -48,3 +53,7 @@ class User(SQLModel, table=True):
                 access=EntityAccess.PRIVATE,
             )
         )
+
+    def update(self, session: Session):
+        session.merge(self)
+        session.commit()
