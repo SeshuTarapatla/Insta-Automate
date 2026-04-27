@@ -318,7 +318,7 @@ class IaUI:
         self.profile_avatar = self.resourceId(
             "profile_header_avatar_container_top_left_stub"
         )
-        self.profile_avatar_expanded = self.content("Profile picture")
+        self.profile_avatar_expanded = self.resourceId("expanded_profile_pic")
 
     def pin_digit(self, digit: int | str) -> UiObject:
         return self.device(self._resourceId("vivo_digit_text", "system"), str(digit))

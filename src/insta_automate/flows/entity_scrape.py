@@ -30,7 +30,8 @@ async def entity_scrape(batch_length: int = Limit.SCRAPE_BATCH):
         log.info(f"A random batch of length={len(batch)} is chosen for scrape.")
         switch_account("alt", device)
         for image in batch:
-            await profile_scrape(image, device=device, session=session)
+            if await profile_scrape(image.stem, device=device, session=session):
+                image.unlink()
             scrape.increment(session=session)
         await db_backup()
     else:

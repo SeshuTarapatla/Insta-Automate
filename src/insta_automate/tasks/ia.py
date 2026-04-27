@@ -308,24 +308,18 @@ async def post_entity_scan(
 
 @ia_task()
 async def profile_scrape(
-    image: Path,
+    id: str,
     buffer: float = 5,
     device: IaDevice | None = None,
     session: Session | None = None,
-) -> Path | None:
+) -> Path | bool:
     log = get_run_logger()
     device = device or IaDevice()
     session = session or SessionLocal()
     ui = device.ui
     inet = Internet()
 
-    if not image.exists():
-        log.error(f"Given image for scrape: {image} doesn't exists.")
-        return
-
     await ensure_network(device)
-
-    id = image.stem
     entity = Entity.from_id(id)
 
     while True:
@@ -337,8 +331,7 @@ async def profile_scrape(
             await ensure_network(device)
         else:
             log.error(f"@{id}: Profile not found")
-            image.unlink()
-            return
+            return True
 
     user = User.from_ui(ui, session)
     if access := device._profile_entity_access():
@@ -349,8 +342,7 @@ async def profile_scrape(
         log.error(
             f"@{id} access is found out to be: {EntityAccess.PUBLIC.upper()}. Skipping scrape."
         )
-        image.unlink()
-        return
+        return True
 
     profile_page = ui.profile_page.screenshot()
     crop_height = int(ui.profile_follow_button.center()[-1])
@@ -362,7 +354,7 @@ async def profile_scrape(
     while dp_try <= 3:
         dp_try += 1
         ui.profile_avatar.long_click()
-        ui.sleep(2)
+        ui.sleep()
         if ui.profile_avatar_expanded.wait(timeout=5):
             dp = ui.profile_avatar_expanded.screenshot()
             break
@@ -376,7 +368,6 @@ async def profile_scrape(
     output = SCRAPED_DIR / f"{id}.jpg"
     profile_report.save(output)
     log.info(f"Scrape exported to {output}")
-    image.unlink()
 
     device.press("back")
     device.sleep(buffer)
