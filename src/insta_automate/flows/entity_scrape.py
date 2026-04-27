@@ -32,9 +32,11 @@ async def entity_scrape(batch_length: int = Limit.SCRAPE_BATCH):
         device = device_ready()
         scrape = Scrape.fetch(session)
         switch_account("alt", device)
-        while scraped < Limit.SCRAPE_BATCH:
+        while (scraped < Limit.SCRAPE_BATCH) and (scrape.scraped < Limit.SCRAPE):
             image = choice(images)
-            log.info(f"{scraped+1}/{Limit.SCRAPE_BATCH}: @{image.stem}: Scrape triggered")
+            log.info(
+                f"{scraped + 1}/{Limit.SCRAPE_BATCH}: @{image.stem}: Scrape triggered"
+            )
             if await profile_scrape(image.stem, device=device, session=session):
                 scrape.increment(session=session)
                 scraped += 1
