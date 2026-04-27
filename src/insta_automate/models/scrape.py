@@ -9,6 +9,7 @@ from insta_automate.models.meta import Limit
 class Scrape(SQLModel, table=True):
     date: date_ = Field(primary_key=True, default_factory=lambda: Timestamp().date())
     scraped: int = Field(default=0, ge=0)
+    processed: int = Field(default=0, ge=0)
     added_on: datetime = Field(default_factory=Timestamp)
     updated_on: datetime = Field(
         default_factory=Timestamp, sa_column_kwargs={"onupdate": Timestamp}
@@ -21,8 +22,11 @@ class Scrape(SQLModel, table=True):
             return scrape
         return cls()
 
-    def increment(self, value: int = 1, session: Session | None = None):
-        self.scraped += value
+    def increment(
+        self, *, scraped: int = 1, progressed: int = 1, session: Session | None = None
+    ):
+        self.scraped += scraped
+        self.progressed += progressed
         if session:
             session.merge(self)
             session.commit()
