@@ -31,8 +31,9 @@ async def entity_scrape(batch_length: int = Limit.SCRAPE_BATCH):
         switch_account("alt", device)
         for image in batch:
             if await profile_scrape(image.stem, device=device, session=session):
-                image.unlink()
-            scrape.increment(session=session)
+                scrape.increment(session=session)
+            image.unlink()
+        device.lock()
         await db_backup()
     else:
         log.error("No entities found to scrape")

@@ -331,7 +331,7 @@ async def profile_scrape(
             await ensure_network(device)
         else:
             log.error(f"@{id}: Profile not found")
-            return True
+            return False
 
     user = User.from_ui(ui, session)
     if access := device._profile_entity_access():
@@ -342,7 +342,10 @@ async def profile_scrape(
         log.error(
             f"@{id} access is found out to be: {EntityAccess.PUBLIC.upper()}. Skipping scrape."
         )
-        return True
+        return False
+    elif user.p == 0:
+        log.error(f"@{id} has zero posts. Skipping scrape.")
+        return False
 
     profile_page = ui.profile_page.screenshot()
     crop_height = int(ui.profile_follow_button.center()[-1])

@@ -3,18 +3,17 @@
 from prefect import get_run_logger
 from pydantic import ValidationError
 
-from insta_automate.controllers.device import IaDevice
 from insta_automate.controllers.telegram import IaTelegram
 from insta_automate.flows import ia_flow
 from insta_automate.tasks.data import db_backup
-from insta_automate.tasks.ia import add_new_entity
+from insta_automate.tasks.ia import add_new_entity, device_ready
 
 
 @ia_flow()
 async def entity_ingest():
     log = get_run_logger()
     tl = await IaTelegram.get_client()
-    device = IaDevice()
+    device = device_ready()
     entity = None
 
     async for msg in tl.iter_entity_messages():
