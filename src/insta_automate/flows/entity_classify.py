@@ -1,3 +1,5 @@
+"""A flow that classifies the entities using vision language LLM."""
+
 from my_modules.datetime_utils import Timestamp
 from prefect import get_run_logger
 
@@ -8,7 +10,7 @@ from insta_automate.vars import SCANNED_DIR
 
 
 @ia_flow()
-def ai_classify():
+def entity_classify():
     log = get_run_logger()
     started_at = Timestamp()
     session = SessionLocal()
@@ -27,4 +29,4 @@ def ai_classify():
 
 
 if __name__ == "__main__":
-    ai_classify.serve()
+    entity_classify.serve()

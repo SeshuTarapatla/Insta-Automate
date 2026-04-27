@@ -86,8 +86,9 @@ class Prefect:
 
         self.entity_ingest = Deployment("entity-ingest")
         self.entity_scan = Deployment("entity-scan")
-        self.ai_classify = Deployment("ai-classify")
+        self.entity_classify = Deployment("entity-classify")
         self.entity_scrape = Deployment("entity-scrape")
+        self.entity_follow = Deployment("entity-follow")
         self.entity_ingest_queued: bool = False
 
     async def ping_telegram(self):
@@ -139,11 +140,11 @@ class Prefect:
                 await self.entity_ingest_trigger()
             await asyncio.sleep(wait)
 
-    async def ai_classify_trigger(self, wait: float = 10):
+    async def entity_classify_trigger(self, wait: float = 10):
         while True:
             if list(SCANNED_DIR.glob("*.jpg")):
                 log.info("Scanned entities found to classify.")
-                await self.ai_classify.trigger()
+                await self.entity_classify.trigger()
                 await self.ping_telegram()
             await asyncio.sleep(wait)
 
@@ -168,7 +169,7 @@ class Prefect:
         asyncio.create_task(self.keep_telegram_alive())
         asyncio.create_task(self.entity_ingest_time_trigger())
         asyncio.create_task(self.entity_scan_trigger())
-        asyncio.create_task(self.ai_classify_trigger())
+        asyncio.create_task(self.entity_classify_trigger())
         asyncio.create_task(self.entity_scrape_trigger())
 
         log.info("Insta Automate Scheduler and Trigerrer started!")
