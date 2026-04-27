@@ -42,11 +42,11 @@ async def entity_follow():
         if follow.limit_reached:
             tl = await IaTelegram.get_client()
             await tl.bot.notify(
-                f"Scrape limit reached for {Timestamp().date()}. Limit: {follow.followed}"
+                f"Follow limit reached for {Timestamp().date()}. Limit: {follow.followed}"
             )
         await db_backup()
     else:
-        log.error("No entities found to scrape")
+        log.error("No entities found to follow")
 
 
 if __name__ == "__main__":
