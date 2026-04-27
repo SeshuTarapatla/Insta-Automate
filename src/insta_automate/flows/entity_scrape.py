@@ -1,7 +1,9 @@
 import random
 
+from my_modules.datetime_utils import Timestamp
 from prefect import get_run_logger
 
+from insta_automate.controllers.cli import IaTelegram
 from insta_automate.controllers.prefect import SessionLocal
 from insta_automate.flows import ia_flow
 from insta_automate.models.meta import Limit
@@ -34,6 +36,11 @@ async def entity_scrape(batch_length: int = Limit.SCRAPE_BATCH):
                 scrape.increment(session=session)
             image.unlink()
         device.lock()
+        if scrape.limit_reached:
+            tl = await IaTelegram.get_client()
+            await tl.bot.notify(
+                f"Scrape limit reached for {Timestamp().date()}. Limit: {scrape.scraped}"
+            )
         await db_backup()
     else:
         log.error("No entities found to scrape")
