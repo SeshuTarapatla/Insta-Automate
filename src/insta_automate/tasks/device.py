@@ -1,6 +1,7 @@
 import asyncio
 
 from my_modules.inet import Internet
+from my_modules.logger import get_logger
 from prefect import get_run_logger
 
 from typing import Literal, cast
@@ -58,9 +59,8 @@ async def network_access(object: Internet | IaDevice | None = None):
             wait_for_network()
 
 
-@ia_task()
 async def wait_for_device(tl: IaTelegram | None = None) -> IaDevice:
-    log = get_run_logger()
+    log = get_logger(__name__)
     tl = tl or (await IaTelegram.get_client())
     notification: Message = cast(Message, None)
     while not IaDevice.connected():
