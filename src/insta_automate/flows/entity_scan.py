@@ -3,7 +3,7 @@
 from prefect import get_run_logger
 
 from insta_automate.controllers.device import IaDevice
-from insta_automate.controllers.postgres import SessionLocal
+from insta_automate.controllers.postgres import IaSession
 from insta_automate.flows import ia_flow
 from insta_automate.models.entity import Entity
 from insta_automate.models.meta import EntityAccess, EntityStatus, EntityType
@@ -22,7 +22,7 @@ from insta_automate.tasks.telegram import notify_scan_limit_reached, notify_prof
 @ia_flow()
 async def entity_scan(url: str, list: ScanList = ScanList.AUTO, device: IaDevice | None = None):
     log = get_run_logger()
-    session = SessionLocal()
+    session = IaSession()
     status = None
     scan = Scan.fetch(session)
     device = device or await device_ready()

@@ -1,4 +1,4 @@
-__all__ = ["IaPostgres", "SessionLocal"]
+__all__ = ["IaPostgres", "IaSession"]
 
 from my_modules.datetime_utils import now
 from my_modules.logger import get_logger
@@ -6,6 +6,7 @@ from my_modules.postgres import Postgres
 from sqlmodel import Session, SQLModel
 
 from insta_automate.models.entity import Entity
+from insta_automate.models.follow import Follow
 from insta_automate.models.scan import Scan
 from insta_automate.models.scanned import Scanned
 from insta_automate.models.scrape import Scrape
@@ -34,7 +35,7 @@ class IaPostgres(Postgres):
         else:
             log.info(f"Creating a new [cyan]{IA_DATABASE}[/] PostgreSQL database.")
             ia_db.create_db()
-        _ = [Entity, User, Scanned, Scan, Scrape]
+        _ = [Entity, User, Scanned, Scan, Scrape, Follow]
         log.info(
             f"Creating required tables for [cyan]{IA_DATABASE}[/] PostgreSQL database."
         )
@@ -45,5 +46,5 @@ class IaPostgres(Postgres):
 engine = IaPostgres().engine
 
 
-def SessionLocal() -> Session:
+def IaSession() -> Session:
     return Session(bind=engine, expire_on_commit=False)

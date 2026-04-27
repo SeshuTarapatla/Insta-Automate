@@ -8,45 +8,41 @@ from prefect import get_run_logger
 from insta_automate.controllers.cli import IaTelegram
 from insta_automate.controllers.prefect import IaSession
 from insta_automate.flows import ia_flow
+from insta_automate.models.follow import Follow
 from insta_automate.models.meta import Limit
-from insta_automate.models.scrape import Scrape
 from insta_automate.tasks.data import db_backup
 from insta_automate.tasks.device import device_ready, switch_account
 from insta_automate.tasks.ia import (
-    SCRAPED_DIR,
     profile_scrape,
 )
-from insta_automate.vars import SCRAPE_QUEUE_DIR
+from insta_automate.vars import FOLLOW_QUEUE_DIR
 
 
 @ia_flow()
-async def entity_scrape():
+async def entity_follow():
     log = get_run_logger()
-    SCRAPE_QUEUE_DIR.mkdir(exist_ok=True, parents=True)
-    SCRAPED_DIR.mkdir(exist_ok=True, parents=True)
-    images = list(SCRAPE_QUEUE_DIR.glob("*.jpg"))
-    scraped = 0
+    FOLLOW_QUEUE_DIR.mkdir(exist_ok=True, parents=True)
+    images = list(FOLLOW_QUEUE_DIR.glob("*.jpg"))
+    followed = 0
     if images:
         session = IaSession()
         device = await device_ready()
-        scrape = Scrape.fetch(session)
+        follow = Follow.fetch(session)
         switch_account("alt", device)
-        while (scraped < Limit.SCRAPE_BATCH) and (not scrape.limit_reached):
+        while (followed < Limit.FOLLOW_BATCH) and (not follow.limit_reached):
             image = choice(images)
             log.info(
-                f"{scraped + 1}/{Limit.SCRAPE_BATCH}: @{image.stem}: Scrape triggered"
+                f"{followed + 1}/{Limit.FOLLOW_BATCH}: @{image.stem}: Follow triggered"
             )
             if await profile_scrape(image.stem, device=device, session=session):
-                scrape.increment(session=session)
-                scraped += 1
-            else:
-                scrape.increment(session=session, scraped=0)
+                follow.increment(session=session)
+                followed += 1
             image.unlink()
         device.lock()
-        if scrape.limit_reached:
+        if follow.limit_reached:
             tl = await IaTelegram.get_client()
             await tl.bot.notify(
-                f"Scrape limit reached for {Timestamp().date()}. Limit: {scrape.scraped}"
+                f"Scrape limit reached for {Timestamp().date()}. Limit: {follow.followed}"
             )
         await db_backup()
     else:
@@ -54,4 +50,4 @@ async def entity_scrape():
 
 
 if __name__ == "__main__":
-    entity_scrape.serve()
+    entity_follow.serve()

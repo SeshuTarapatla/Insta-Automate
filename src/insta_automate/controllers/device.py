@@ -296,9 +296,7 @@ class IaUI:
         self.profile_following = self.resourceId(
             "profile_header_familiar_following_value"
         )
-        self.profile_follow_button = self.resourceId(
-            "profile_header_user_action_follow_button"
-        )
+        self.profile_follow_button = self.resourceId("profile_header_follow_button")
         self.profile_header = self.resourceId("profile_header_container")
         self.profile_id = self.action_bar_title
         self.profile_name = self.resourceId("profile_header_full_name_above_vanity")

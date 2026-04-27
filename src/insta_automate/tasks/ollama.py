@@ -8,7 +8,7 @@ from insta_automate.controllers.ollama import (
     AiClassifier,
     GenderClassifier,
 )
-from insta_automate.controllers.prefect import SessionLocal
+from insta_automate.controllers.prefect import IaSession
 from insta_automate.models.meta import EntityAccess, Gender
 from insta_automate.models.scanned import Scanned
 from insta_automate.tasks import ia_task
@@ -35,7 +35,7 @@ def get_ai_client(classifier: type[T]) -> T:
 @ia_task()
 def remove_public(session: Session | None = None) -> tuple[int, int, int]:
     log = get_run_logger()
-    session = session or SessionLocal()
+    session = session or IaSession()
     classifier = get_ai_client(AccessClassifier)
     entities = list(SCANNED_DIR.glob("*.jpg"))
 
@@ -67,7 +67,7 @@ def remove_public(session: Session | None = None) -> tuple[int, int, int]:
 @ia_task()
 def gender_classify(session: Session | None = None) -> tuple[int, int, int]:
     log = get_run_logger()
-    session = session or SessionLocal()
+    session = session or IaSession()
     classifier = get_ai_client(GenderClassifier)
     entities = list(SCANNED_DIR.glob("*.jpg"))
 

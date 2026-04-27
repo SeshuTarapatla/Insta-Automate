@@ -14,13 +14,14 @@ from telethon.events import NewMessage
 from datetime import date
 
 from insta_automate.controllers.device import IaDevice
-from insta_automate.controllers.postgres import SessionLocal
+from insta_automate.controllers.postgres import IaSession
 from insta_automate.controllers.telegram import IaTelegram
 from insta_automate.models.entity import Entity
+from insta_automate.models.follow import Follow
 from insta_automate.models.scan import Scan
 from insta_automate.models.scrape import Scrape
 from insta_automate.tasks.device import wait_for_device
-from insta_automate.vars import SCANNED_DIR, SCRAPE_QUEUE_DIR
+from insta_automate.vars import FOLLOW_QUEUE_DIR, SCANNED_DIR, SCRAPE_QUEUE_DIR
 
 log = get_logger(__name__)
 
@@ -79,7 +80,7 @@ class Deployment:
 class Prefect:
     def __init__(self) -> None:
         self.tl = IaTelegram()
-        self.session = SessionLocal()
+        self.session = IaSession()
         self.inet = Internet()
 
         self.device: IaDevice = cast(IaDevice, None)
@@ -162,6 +163,20 @@ class Prefect:
                 await self.ping_telegram()
             await asyncio.sleep(wait)
 
+    async def entity_follow_trigger(self, wait: float = 1200):
+        while True:
+            follow = Follow.fetch(self.session)
+            if follow.limit_reached:
+                log.info(
+                    "Follow limit reached for the day. Pausing trigger until next day."
+                )
+                await self.wait_day_change(Timestamp().date())
+            elif list(FOLLOW_QUEUE_DIR.glob("*.jpg")):
+                log.info("Queued entities found to follow.")
+                await self.entity_follow.trigger()
+                await self.ping_telegram()
+            await asyncio.sleep(wait)
+
     async def serve(self):
         await self.tl.start()
         self.device = await wait_for_device(self.tl)
@@ -171,6 +186,7 @@ class Prefect:
         asyncio.create_task(self.entity_scan_trigger())
         asyncio.create_task(self.entity_classify_trigger())
         asyncio.create_task(self.entity_scrape_trigger())
+        asyncio.create_task(self.entity_follow_trigger())
 
         log.info("Insta Automate Scheduler and Trigerrer started!")
 

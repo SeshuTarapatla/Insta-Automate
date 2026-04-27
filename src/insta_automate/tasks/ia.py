@@ -7,10 +7,16 @@ from prefect import get_run_logger
 from sqlmodel import Session
 
 from insta_automate.controllers.device import IaDevice
-from insta_automate.controllers.postgres import SessionLocal
+from insta_automate.controllers.postgres import IaSession
 from insta_automate.exceptions import InvalidEntity
 from insta_automate.models.entity import Entity
-from insta_automate.models.meta import EntityAccess, EntityStatus, EntityType, ScanList
+from insta_automate.models.meta import (
+    EntityAccess,
+    EntityRequest,
+    EntityStatus,
+    EntityType,
+    ScanList,
+)
 from insta_automate.models.scanned import Scanned
 from insta_automate.models.user import User
 from insta_automate.tasks import ia_task
@@ -44,7 +50,7 @@ def scan_entity_init(
 ):
     log = get_run_logger()
     device = device or IaDevice()
-    session = session or SessionLocal()
+    session = session or IaSession()
 
     device.app_start()
     switch_account_for_entity(entity)
@@ -69,7 +75,7 @@ def add_new_entity(url: str, device: IaDevice | None = None) -> Entity:
     device = device or IaDevice()
     log.info(f"Input entity url: {url}")
     entity = Entity.from_url(url)
-    with SessionLocal() as session:
+    with IaSession() as session:
         if (_entity := entity.fetch(session)) is not None:
             log.warning(f"Entity already exists: {_entity.model_dump_json(indent=4)}")
         else:
@@ -95,7 +101,7 @@ async def profile_entity_scan(
     started = Timestamp()
     log = get_run_logger()
     device = device or IaDevice()
-    session = session or SessionLocal()
+    session = session or IaSession()
     ui = device.ui
 
     # match entity type with scan type
@@ -194,7 +200,7 @@ async def post_entity_scan(
     started = Timestamp()
     log = get_run_logger()
     device = device or IaDevice()
-    session = session or SessionLocal()
+    session = session or IaSession()
     ui = device.ui
 
     if entity.type not in (EntityType.REEL, EntityType.POST):
@@ -272,7 +278,7 @@ async def profile_scrape(
 ) -> Path | bool:
     log = get_run_logger()
     device = device or IaDevice()
-    session = session or SessionLocal()
+    session = session or IaSession()
     ui = device.ui
     inet = Internet()
 
@@ -333,3 +339,60 @@ async def profile_scrape(
     device.sleep(buffer)
 
     return output
+
+
+@ia_task()
+async def profile_follow(
+    id: str,
+    buffer: float = 5,
+    device: IaDevice | None = None,
+    session: Session | None = None,
+) -> bool:
+    log = get_run_logger()
+    device = device or IaDevice()
+    session = session or IaSession()
+    ui = device.ui
+    inet = Internet()
+
+    await ensure_network(device)
+    entity = Entity.from_id(id)
+
+    while True:
+        log.info(f"Following profile: @{id}")
+        device.open_entity(entity)
+        if ui.profile_id.wait(timeout=5):
+            break
+        elif not inet.is_active:
+            await ensure_network(device)
+        else:
+            log.error(f"@{id}: Profile not found")
+            return False
+
+    if device._profile_entity_access() == EntityAccess.PUBLIC:
+        log.error(
+            f"@{id} access is found out to be: {EntityAccess.PUBLIC.upper()}. Skipping scrape."
+        )
+        return False
+
+    if ui.profile_follow_button.wait(timeout=5):
+        current = ui.profile_follow_button.get_text()
+        match current:
+            case EntityRequest.FOLLOW:
+                ui.profile_follow_button.click()
+                log.info(f"@{id} follow successful.")
+                status = True
+            case EntityRequest.REQUESTED | EntityRequest.FOLLOWING:
+                log.warning(
+                    f"@{id} profile request status is already: {current.upper()}"
+                )
+                status = False
+            case _:
+                log.error(f"@{id} profile unknown status: {current.upper()}")
+                status = False
+        status = True
+    else:
+        log.error(f"@{id} follow failed.")
+        status = False
+
+    device.sleep(buffer)
+    return status

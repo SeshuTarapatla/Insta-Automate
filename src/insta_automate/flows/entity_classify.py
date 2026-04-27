@@ -3,7 +3,7 @@
 from my_modules.datetime_utils import Timestamp
 from prefect import get_run_logger
 
-from insta_automate.controllers.prefect import SessionLocal
+from insta_automate.controllers.prefect import IaSession
 from insta_automate.flows import ia_flow
 from insta_automate.tasks.ollama import remove_public, gender_classify
 from insta_automate.vars import SCANNED_DIR
@@ -13,7 +13,7 @@ from insta_automate.vars import SCANNED_DIR
 def entity_classify():
     log = get_run_logger()
     started_at = Timestamp()
-    session = SessionLocal()
+    session = IaSession()
     images = list(SCANNED_DIR.glob("*.jpg"))
     if images:
         log.info(f"Total entities to classify: {len(images)}")
