@@ -1,4 +1,3 @@
-import asyncio
 import random
 
 from prefect import get_run_logger
@@ -7,6 +6,7 @@ from insta_automate.controllers.prefect import SessionLocal
 from insta_automate.flows import ia_flow
 from insta_automate.models.meta import Limit
 from insta_automate.models.scrape import Scrape
+from insta_automate.tasks.data import db_backup
 from insta_automate.tasks.ia import (
     SCRAPED_DIR,
     device_ready,
@@ -17,7 +17,7 @@ from insta_automate.vars import SCRAPE_QUEUE_DIR
 
 
 @ia_flow()
-async def entity_scrape():
+async def entity_scrape(batch_length: int = Limit.SCRAPE_BATCH):
     log = get_run_logger()
     SCRAPE_QUEUE_DIR.mkdir(exist_ok=True, parents=True)
     SCRAPED_DIR.mkdir(exist_ok=True, parents=True)
@@ -26,13 +26,13 @@ async def entity_scrape():
         session = SessionLocal()
         device = device_ready()
         scrape = Scrape.fetch(session)
-        batch = random.sample(images, min(Limit.SCRAPE_BATCH, len(images)))
+        batch = random.sample(images, min(batch_length, len(images)))
         log.info(f"A random batch of length={len(batch)} is chosen for scrape.")
         switch_account("alt", device)
         for image in batch:
             await profile_scrape(image, device=device, session=session)
             scrape.increment(session=session)
-            await asyncio.sleep(5)
+        await db_backup()
     else:
         log.error("No entities found to scrape")
 

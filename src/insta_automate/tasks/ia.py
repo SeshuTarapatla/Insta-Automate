@@ -308,8 +308,11 @@ async def post_entity_scan(
 
 @ia_task()
 async def profile_scrape(
-    image: Path, device: IaDevice | None = None, session: Session | None = None
-):
+    image: Path,
+    buffer: float = 5,
+    device: IaDevice | None = None,
+    session: Session | None = None,
+) -> Path | None:
     log = get_run_logger()
     device = device or IaDevice()
     session = session or SessionLocal()
@@ -376,3 +379,6 @@ async def profile_scrape(
     image.unlink()
 
     device.press("back")
+    device.sleep(buffer)
+
+    return output
