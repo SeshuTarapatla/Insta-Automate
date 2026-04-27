@@ -11,7 +11,6 @@ from prefect.client.schemas.objects import FlowRun, StateType
 from prefect.deployments import run_deployment
 from prefect.flow_runs import wait_for_flow_run
 from telethon.events import NewMessage
-from telethon.types import Message
 from datetime import date
 
 from insta_automate.controllers.device import IaDevice
@@ -20,7 +19,7 @@ from insta_automate.controllers.telegram import IaTelegram
 from insta_automate.models.entity import Entity
 from insta_automate.models.scan import Scan
 from insta_automate.models.scrape import Scrape
-from insta_automate.models.telegram import IaMessages
+from insta_automate.tasks.device import wait_for_device
 from insta_automate.vars import SCANNED_DIR, SCRAPE_QUEUE_DIR
 
 log = get_logger(__name__)
@@ -90,22 +89,6 @@ class Prefect:
         self.ai_classify = Deployment("ai-classify")
         self.entity_scrape = Deployment("entity-scrape")
         self.entity_ingest_queued: bool = False
-
-    async def wait_for_device(self):
-        notification: Message = cast(Message, None)
-        while not IaDevice.connected():
-            if notification is None:
-                log.error(IaMessages.DEVICE_DISCONNECTED)
-                notification = await self.tl.bot.notify(IaMessages.DEVICE_DISCONNECTED)
-            await asyncio.sleep(1)
-        log.info(IaMessages.DEVICE_CONNECTED)
-        if notification is not None:
-            await self.tl.bot.notify(IaMessages.DEVICE_CONNECTED, transient=True)
-            await self.tl.purge_adb_notifications()
-        self.device = self.device or IaDevice()
-        self.device.start_scrcpy()
-        self.device.sleep(1)
-        self.device.lock()
 
     async def ping_telegram(self):
         log.info("Pinging telegram to keep session alive.")
@@ -180,7 +163,7 @@ class Prefect:
 
     async def serve(self):
         await self.tl.start()
-        await self.wait_for_device()
+        self.device = await wait_for_device(self.tl)
 
         asyncio.create_task(self.keep_telegram_alive())
         asyncio.create_task(self.entity_ingest_time_trigger())

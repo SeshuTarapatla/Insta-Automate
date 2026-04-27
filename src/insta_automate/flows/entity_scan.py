@@ -10,13 +10,13 @@ from insta_automate.models.meta import EntityAccess, EntityStatus, EntityType
 from insta_automate.models.scan import Scan
 from insta_automate.models.meta import ScanList
 from insta_automate.tasks.data import db_backup
+from insta_automate.tasks.device import device_ready
 from insta_automate.tasks.ia import (
     determine_entity_access,
-    device_ready,
     post_entity_scan,
     profile_entity_scan,
 )
-from insta_automate.tasks.tl import notify_scan_limit_reached, notify_profile_unfollow
+from insta_automate.tasks.telegram import notify_scan_limit_reached, notify_profile_unfollow
 
 
 @ia_flow()
@@ -25,7 +25,7 @@ async def entity_scan(url: str, list: ScanList = ScanList.AUTO, device: IaDevice
     session = SessionLocal()
     status = None
     scan = Scan.fetch(session)
-    device = device or device_ready()
+    device = device or await device_ready()
     if (entity := Entity.fetch(url, session)) is None:
         log.warning(
             f"Entity with url: {url} not found in the db. Creating a new one..."

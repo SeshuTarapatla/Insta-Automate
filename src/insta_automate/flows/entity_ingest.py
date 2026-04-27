@@ -6,14 +6,15 @@ from pydantic import ValidationError
 from insta_automate.controllers.telegram import IaTelegram
 from insta_automate.flows import ia_flow
 from insta_automate.tasks.data import db_backup
-from insta_automate.tasks.ia import add_new_entity, device_ready
+from insta_automate.tasks.device import device_ready
+from insta_automate.tasks.ia import add_new_entity
 
 
 @ia_flow()
 async def entity_ingest():
     log = get_run_logger()
     tl = await IaTelegram.get_client()
-    device = device_ready()
+    device = await device_ready(tl)
     entity = None
 
     async for msg in tl.iter_entity_messages():

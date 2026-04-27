@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Literal
 
 from my_modules.datetime_utils import Timestamp
 from my_modules.inet import Internet
@@ -15,50 +14,8 @@ from insta_automate.models.meta import EntityAccess, EntityStatus, EntityType, S
 from insta_automate.models.scanned import Scanned
 from insta_automate.models.user import User
 from insta_automate.tasks import ia_task
+from insta_automate.tasks.device import network_access, switch_account_for_entity
 from insta_automate.vars import ELEMENT_HEIGHT, IA_DIR, SCANNED_DIR, SCRAPED_DIR
-
-
-@ia_task()
-def device_ready() -> IaDevice:
-    device = IaDevice()
-    device.start_scrcpy()
-    device.app_start()
-    return device
-
-
-@ia_task()
-def switch_account(
-    account: Literal["alt", "main"], device: IaDevice | None = None
-) -> bool:
-    log = get_run_logger()
-    device = device or IaDevice()
-    log.info(f"Switching to {account.upper()} account.")
-    return device.switch_account(account)
-
-
-@ia_task()
-def switch_account_for_entity(entity: Entity, device: IaDevice | None = None) -> bool:
-    account = "alt" if entity.access == EntityAccess.PUBLIC else "main"
-    return switch_account(account, device)
-
-
-@ia_task()
-async def network_access(object: Internet | IaDevice | None = None):
-    def wait_for_network():
-        log.error("Internet disconnected. Awaiting for network...")
-        wait_method()
-        log.info("Internet is back. Network access active.")
-
-    log = get_run_logger()
-    object = object or Internet()
-    if isinstance(object, Internet):
-        wait_method = object.wait_for_network
-        if not object.is_active:
-            wait_for_network()
-    elif isinstance(object, IaDevice):
-        wait_method = object.wait_for_network
-        if not object.inet.is_active:
-            wait_for_network()
 
 
 async def ensure_network(object: Internet | IaDevice | None = None) -> bool:

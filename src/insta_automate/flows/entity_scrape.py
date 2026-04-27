@@ -11,11 +11,10 @@ from insta_automate.flows import ia_flow
 from insta_automate.models.meta import Limit
 from insta_automate.models.scrape import Scrape
 from insta_automate.tasks.data import db_backup
+from insta_automate.tasks.device import device_ready, switch_account
 from insta_automate.tasks.ia import (
     SCRAPED_DIR,
-    device_ready,
     profile_scrape,
-    switch_account,
 )
 from insta_automate.vars import SCRAPE_QUEUE_DIR
 
@@ -29,7 +28,7 @@ async def entity_scrape(batch_length: int = Limit.SCRAPE_BATCH):
     scraped = 0
     if images:
         session = SessionLocal()
-        device = device_ready()
+        device = await device_ready()
         scrape = Scrape.fetch(session)
         switch_account("alt", device)
         while (scraped < Limit.SCRAPE_BATCH) and (not scrape.limit_reached):
