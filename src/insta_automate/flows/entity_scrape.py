@@ -41,7 +41,7 @@ async def entity_scrape(batch_length: int = Limit.SCRAPE_BATCH):
                 scrape.increment(session=session)
                 scraped += 1
             else:
-                scrape.increment(session=session, scraped=0, progressed=1)
+                scrape.increment(session=session, scraped=0)
             image.unlink()
         device.lock()
         if scrape.limit_reached:

@@ -23,10 +23,10 @@ class Scrape(SQLModel, table=True):
         return cls()
 
     def increment(
-        self, *, scraped: int = 1, progressed: int = 1, session: Session | None = None
+        self, *, scraped: int = 1, processed: int = 1, session: Session | None = None
     ):
         self.scraped += scraped
-        self.progressed += progressed
+        self.processed += processed
         if session:
             session.merge(self)
             session.commit()
