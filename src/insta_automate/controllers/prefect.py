@@ -117,7 +117,6 @@ class Prefect:
                     f"Trigerring scan for:\n{entities[0].model_dump_json(indent=4)}"
                 )
                 self.inet.wait_for_network()
-                await self.wait_for_device()
                 await self.entity_scan.trigger(parameters={"url": entities[0].url})
             await asyncio.sleep(10)
 
@@ -136,7 +135,6 @@ class Prefect:
                 "Entity ingest flow is already in queue. Skipping this trigger."
             )
         else:
-            await self.wait_for_device()
             self.entity_ingest_queued = True
             log.info("New entities found to ingest.")
             self.inet.wait_for_network()
@@ -165,20 +163,21 @@ class Prefect:
                 continue
             elif list(SCRAPE_QUEUE_DIR.glob("*.jpg")):
                 log.info("Queued entities found to scrape.")
-                await self.wait_for_device()
                 await self.entity_scrape.trigger()
                 await self.ping_telegram()
             await asyncio.sleep(wait)
 
     async def serve(self):
         await self.tl.start()
-        log.info("Insta Automate Scheduler and Trigerrer started!")
+        await self.wait_for_device()
 
         asyncio.create_task(self.keep_telegram_alive())
         asyncio.create_task(self.entity_ingest_time_trigger())
         asyncio.create_task(self.entity_scan_trigger())
         asyncio.create_task(self.ai_classify_trigger())
         asyncio.create_task(self.entity_scrape_trigger())
+        
+        log.info("Insta Automate Scheduler and Trigerrer started!")
 
         @self.tl.on(NewMessage(chats=self.tl.entity_channel))
         async def entity_ingest_message_trigger(event: NewMessage.Event):
