@@ -13,7 +13,7 @@ from insta_automate.models.meta import Limit
 from insta_automate.tasks.data import db_backup
 from insta_automate.tasks.device import device_ready, switch_account
 from insta_automate.tasks.ia import (
-    profile_scrape,
+    profile_follow,
 )
 from insta_automate.vars import FOLLOW_QUEUE_DIR
 
@@ -34,7 +34,7 @@ async def entity_follow():
             log.info(
                 f"{followed + 1}/{Limit.FOLLOW_BATCH}: @{image.stem}: Follow triggered"
             )
-            if await profile_scrape(image.stem, device=device, session=session):
+            if await profile_follow(image.stem, device=device, session=session):
                 follow.increment(session=session)
                 followed += 1
             image.unlink()
