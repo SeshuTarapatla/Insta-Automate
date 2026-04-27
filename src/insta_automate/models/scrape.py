@@ -1,3 +1,5 @@
+"""A flow that scrapes the selected users in queue directory."""
+
 from datetime import date as date_, datetime
 
 from my_modules.datetime_utils import Timestamp

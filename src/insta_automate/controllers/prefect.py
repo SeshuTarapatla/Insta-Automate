@@ -124,6 +124,9 @@ class Prefect:
         while True:
             scan = Scan.fetch(self.session)
             if scan.limit_reached:
+                log.info(
+                    "Scan limit reached for the day. Pausing trigger until next day."
+                )
                 await self.wait_day_change(Timestamp().date())
             elif entities := Entity.fetch_queued_entities(self.session):
                 log.info(f"Total entities queued for scan: {len(entities)}")
@@ -165,6 +168,9 @@ class Prefect:
         while True:
             scrape = Scrape.fetch(self.session)
             if scrape.limit_reached:
+                log.info(
+                    "Scrape limit reached for the day. Pausing trigger until next day."
+                )
                 await self.wait_day_change(Timestamp().date())
             elif list(SCRAPE_QUEUE_DIR.glob("*.jpg")):
                 log.info("Queued entities found to scrape.")
