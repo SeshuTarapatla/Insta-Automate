@@ -362,7 +362,7 @@ async def profile_scrape(
     while dp_try <= 3:
         dp_try += 1
         ui.profile_avatar.long_click()
-        ui.sleep()
+        ui.sleep(2)
         if ui.profile_avatar_expanded.wait(timeout=5):
             dp = ui.profile_avatar_expanded.screenshot()
             break
