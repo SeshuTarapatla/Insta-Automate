@@ -15,6 +15,7 @@ from insta_automate.tasks.device import device_ready, switch_account
 from insta_automate.tasks.ia import (
     profile_follow,
 )
+from insta_automate.utils import jpegs
 from insta_automate.vars import FOLLOW_QUEUE_DIR
 
 
@@ -22,15 +23,14 @@ from insta_automate.vars import FOLLOW_QUEUE_DIR
 async def entity_follow():
     log = get_run_logger()
     FOLLOW_QUEUE_DIR.mkdir(exist_ok=True, parents=True)
-    images = list(FOLLOW_QUEUE_DIR.glob("*.jpg"))
     followed = 0
-    if images:
+    if jpegs(FOLLOW_QUEUE_DIR):
         session = IaSession()
         device = await device_ready()
         follow = Follow.fetch(session)
-        switch_account("alt", device)
+        switch_account("main", device)
         while (followed < Limit.FOLLOW_BATCH) and (not follow.limit_reached):
-            image = choice(images)
+            image = choice(jpegs(FOLLOW_QUEUE_DIR))
             log.info(
                 f"{followed + 1}/{Limit.FOLLOW_BATCH}: @{image.stem}: Follow triggered"
             )

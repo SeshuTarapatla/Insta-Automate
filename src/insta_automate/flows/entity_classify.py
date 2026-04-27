@@ -6,6 +6,7 @@ from prefect import get_run_logger
 from insta_automate.controllers.prefect import IaSession
 from insta_automate.flows import ia_flow
 from insta_automate.tasks.ollama import remove_public, gender_classify
+from insta_automate.utils import jpegs
 from insta_automate.vars import SCANNED_DIR
 
 
@@ -14,7 +15,7 @@ def entity_classify():
     log = get_run_logger()
     started_at = Timestamp()
     session = IaSession()
-    images = list(SCANNED_DIR.glob("*.jpg"))
+    images = jpegs(SCANNED_DIR)
     if images:
         log.info(f"Total entities to classify: {len(images)}")
         private, public, rtotal = remove_public(session)

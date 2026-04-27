@@ -21,6 +21,7 @@ from insta_automate.models.follow import Follow
 from insta_automate.models.scan import Scan
 from insta_automate.models.scrape import Scrape
 from insta_automate.tasks.device import wait_for_device
+from insta_automate.utils import jpegs
 from insta_automate.vars import FOLLOW_QUEUE_DIR, SCANNED_DIR, SCRAPE_QUEUE_DIR
 
 log = get_logger(__name__)
@@ -143,7 +144,7 @@ class Prefect:
 
     async def entity_classify_trigger(self, wait: float = 10):
         while True:
-            if list(SCANNED_DIR.glob("*.jpg")):
+            if jpegs(SCANNED_DIR):
                 log.info("Scanned entities found to classify.")
                 await self.entity_classify.trigger()
                 await self.ping_telegram()
@@ -157,7 +158,7 @@ class Prefect:
                     "Scrape limit reached for the day. Pausing trigger until next day."
                 )
                 await self.wait_day_change(Timestamp().date())
-            elif list(SCRAPE_QUEUE_DIR.glob("*.jpg")):
+            elif jpegs(SCRAPE_QUEUE_DIR):
                 log.info("Queued entities found to scrape.")
                 await self.entity_scrape.trigger()
                 await self.ping_telegram()
@@ -171,7 +172,7 @@ class Prefect:
                     "Follow limit reached for the day. Pausing trigger until next day."
                 )
                 await self.wait_day_change(Timestamp().date())
-            elif list(FOLLOW_QUEUE_DIR.glob("*.jpg")):
+            elif jpegs(FOLLOW_QUEUE_DIR):
                 log.info("Queued entities found to follow.")
                 await self.entity_follow.trigger()
                 await self.ping_telegram()

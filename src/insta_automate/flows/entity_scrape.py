@@ -16,6 +16,7 @@ from insta_automate.tasks.ia import (
     SCRAPED_DIR,
     profile_scrape,
 )
+from insta_automate.utils import jpegs
 from insta_automate.vars import SCRAPE_QUEUE_DIR
 
 
@@ -24,15 +25,14 @@ async def entity_scrape():
     log = get_run_logger()
     SCRAPE_QUEUE_DIR.mkdir(exist_ok=True, parents=True)
     SCRAPED_DIR.mkdir(exist_ok=True, parents=True)
-    images = list(SCRAPE_QUEUE_DIR.glob("*.jpg"))
     scraped = 0
-    if images:
+    if jpegs(SCRAPE_QUEUE_DIR):
         session = IaSession()
         device = await device_ready()
         scrape = Scrape.fetch(session)
         switch_account("alt", device)
         while (scraped < Limit.SCRAPE_BATCH) and (not scrape.limit_reached):
-            image = choice(images)
+            image = choice(jpegs(SCRAPE_QUEUE_DIR))
             log.info(
                 f"{scraped + 1}/{Limit.SCRAPE_BATCH}: @{image.stem}: Scrape triggered"
             )

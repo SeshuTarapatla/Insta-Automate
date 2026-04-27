@@ -26,3 +26,7 @@ def move(src: Path, dst: Path, replace: bool = False):
     if replace and dst.exists():
         send2trash(dst)
     _move(src, dst)
+
+
+def jpegs(folder: Path) -> list[Path]:
+    return list(folder.glob("*.jpg"))

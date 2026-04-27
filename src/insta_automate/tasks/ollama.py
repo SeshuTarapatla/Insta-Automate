@@ -12,7 +12,7 @@ from insta_automate.controllers.prefect import IaSession
 from insta_automate.models.meta import EntityAccess, Gender
 from insta_automate.models.scanned import Scanned
 from insta_automate.tasks import ia_task
-from insta_automate.utils import move
+from insta_automate.utils import jpegs, move
 from insta_automate.vars import (
     GENDER_INVALID_DIR,
     GENDER_VALID_DIR,
@@ -37,7 +37,7 @@ def remove_public(session: Session | None = None) -> tuple[int, int, int]:
     log = get_run_logger()
     session = session or IaSession()
     classifier = get_ai_client(AccessClassifier)
-    entities = list(SCANNED_DIR.glob("*.jpg"))
+    entities = jpegs(SCANNED_DIR)
 
     total, public, private, failed = len(entities), 0, 0, 0
 
@@ -69,7 +69,7 @@ def gender_classify(session: Session | None = None) -> tuple[int, int, int]:
     log = get_run_logger()
     session = session or IaSession()
     classifier = get_ai_client(GenderClassifier)
-    entities = list(SCANNED_DIR.glob("*.jpg"))
+    entities = jpegs(SCANNED_DIR)
 
     GENDER_VALID_DIR.mkdir(exist_ok=True, parents=True)
     GENDER_INVALID_DIR.mkdir(exist_ok=True, parents=True)
