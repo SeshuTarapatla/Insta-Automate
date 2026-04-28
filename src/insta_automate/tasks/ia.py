@@ -282,6 +282,8 @@ async def profile_scrape(
     ui = device.ui
     inet = Internet()
 
+    f_min, f_max = 100, 2500
+
     await ensure_network(device)
     entity = Entity.from_id(id)
 
@@ -308,6 +310,12 @@ async def profile_scrape(
         return False
     elif user.p == 0:
         log.error(f"@{id} has zero posts. Skipping scrape.")
+        return False
+    elif (_min := min(user.f1, user.f2)) < f_min:
+        log.error(f"@{id} has {_min} < {f_min} followers. Skipping scrape.")
+        return False
+    elif (_max := max(user.f1, user.f2)) > f_max:
+        log.error(f"@{id} has {_max} > {f_max} followers. Skipping scrape.")
         return False
 
     profile_page = ui.profile_page.screenshot()
@@ -354,8 +362,6 @@ async def profile_follow(
     ui = device.ui
     inet = Internet()
 
-    f_min, f_max = 100, 2500
-
     await ensure_network(device)
     entity = Entity.from_id(id)
 
@@ -370,26 +376,9 @@ async def profile_follow(
             log.error(f"@{id}: Profile not found")
             return False
 
-    user = User.from_ui(ui, session)
-    if access := device._profile_entity_access():
-        user.access = access
-    user.update(session)
-
-    if user.access == EntityAccess.PUBLIC:
+    if device._profile_entity_access() == EntityAccess.PUBLIC:
         log.error(
-            f"@{id} access is found out to be: {user.access.upper()}. Skipping scrape."
-        )
-        return False
-
-    if (_min := min(user.f1, user.f2)) < f_min:
-        log.error(
-            f"@{id} fcount is less than {f_min}: {_min}. Skipping scrape."
-        )
-        return False
-
-    if (_max := max(user.f1, user.f2)) > f_max:
-        log.error(
-            f"@{id} fcount is greater than {f_max}: {_max}. Skipping scrape."
+            f"@{id} access is found out to be: {EntityAccess.PUBLIC.upper()}. Skipping scrape."
         )
         return False
 
