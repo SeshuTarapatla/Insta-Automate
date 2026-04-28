@@ -150,7 +150,7 @@ class Prefect:
                 await self.ping_telegram()
             await asyncio.sleep(wait)
 
-    async def entity_scrape_trigger(self, wait: float = 600):
+    async def entity_scrape_trigger(self, wait: float = 300):
         while True:
             scrape = Scrape.fetch(self.session)
             if scrape.limit_reached:

@@ -54,7 +54,7 @@ class Limit:
     POSTS = 30
     SCRAPE = 500
     SCRAPE_BATCH = 10
-    FOLLOW = 40
+    FOLLOW = 50
     FOLLOW_BATCH = 5
 
 
