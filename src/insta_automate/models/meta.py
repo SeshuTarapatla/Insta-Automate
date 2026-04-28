@@ -52,9 +52,9 @@ class Limit:
     PROFILES = 10
     REELS = 30
     POSTS = 30
-    SCRAPE = 500
+    SCRAPE = 200
     SCRAPE_BATCH = 10
-    FOLLOW = 50
+    FOLLOW = 40
     FOLLOW_BATCH = 5
 
 
