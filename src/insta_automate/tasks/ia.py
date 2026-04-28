@@ -397,7 +397,6 @@ async def profile_follow(
             case _:
                 log.error(f"@{id} profile unknown status: {current.upper()}")
                 status = False
-        status = True
     else:
         log.error(f"@{id} follow failed.")
         status = False
