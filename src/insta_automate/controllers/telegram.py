@@ -185,7 +185,7 @@ class BotTelegramClient(BaseTelegramClient):
         self,
         message: str,
         transient: Literal[True],
-        file: FileLike | Sequence[FileLike] = cast(FileLike, None),
+        file: FileLike | Sequence[FileLike] | Path = cast(FileLike, None),
     ) -> None: ...
 
     @overload
@@ -193,18 +193,18 @@ class BotTelegramClient(BaseTelegramClient):
         self,
         message: str,
         transient: Literal[False] = False,
-        file: FileLike | Sequence[FileLike] = cast(FileLike, None),
+        file: FileLike | Sequence[FileLike] | Path = cast(FileLike, None),
     ) -> Message: ...
 
     async def notify(
         self,
         message: str,
         transient: bool = False,
-        file: FileLike | Sequence[FileLike] = cast(FileLike, None),
+        file: FileLike | Sequence[FileLike] | Path = cast(FileLike, None),
     ) -> Message | None:
         if self.notify_channel_id:
             notification = await self.send_message(
-                self.notify_channel_id, message=message, file=file
+                self.notify_channel_id, message=message, file=cast(FileLike, file)
             )
             if transient:
                 asyncio.create_task(self.delete_message(notification, delay=5))

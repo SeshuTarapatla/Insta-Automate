@@ -317,6 +317,7 @@ class IaUI:
             "profile_header_avatar_container_top_left_stub"
         )
         self.profile_avatar_expanded = self.resourceId("expanded_profile_pic")
+        self.followed_by = self.text_contains("Followed by")
 
     def pin_digit(self, digit: int | str) -> UiObject:
         return self.device(self._resourceId("vivo_digit_text", "system"), str(digit))
@@ -348,6 +349,9 @@ class IaUI:
 
     def content(self, description: str) -> UiObject:
         return self.device(description=description)
+
+    def text_contains(self, text: str) -> UiObject:
+        return self.device(textContains=text)
 
     @staticmethod
     def height(ui_object: UiObject, timeout: int = 0) -> int:

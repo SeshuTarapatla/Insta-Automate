@@ -8,6 +8,7 @@ from sqlmodel import Session
 
 from insta_automate.controllers.device import IaDevice
 from insta_automate.controllers.postgres import IaSession
+from insta_automate.controllers.telegram import IaTelegram
 from insta_automate.exceptions import InvalidEntity
 from insta_automate.models.entity import Entity
 from insta_automate.models.meta import (
@@ -21,7 +22,13 @@ from insta_automate.models.scanned import Scanned
 from insta_automate.models.user import User
 from insta_automate.tasks import ia_task
 from insta_automate.tasks.device import network_access, switch_account_for_entity
-from insta_automate.vars import ELEMENT_HEIGHT, IA_DIR, SCANNED_DIR, SCRAPED_DIR
+from insta_automate.vars import (
+    ELEMENT_HEIGHT,
+    FOLLOW_QUEUE_DIR,
+    IA_DIR,
+    SCANNED_DIR,
+    SCRAPED_DIR,
+)
 
 
 async def ensure_network(object: Internet | IaDevice | None = None) -> bool:
@@ -355,10 +362,12 @@ async def profile_follow(
     buffer: float = 5,
     device: IaDevice | None = None,
     session: Session | None = None,
+    tl: IaTelegram | None = None,
 ) -> bool:
     log = get_run_logger()
     device = device or IaDevice()
     session = session or IaSession()
+    tl = tl or await IaTelegram.get_client()
     ui = device.ui
     inet = Internet()
 
@@ -379,6 +388,12 @@ async def profile_follow(
     if device._profile_entity_access() == EntityAccess.PUBLIC:
         log.error(
             f"@{id} access is found out to be: {EntityAccess.PUBLIC.upper()}. Skipping scrape."
+        )
+        return False
+
+    if ui.followed_by.exists:
+        await tl.bot.notify(
+            f"@{id} is {ui.followed_by.get_text()}", file=FOLLOW_QUEUE_DIR / f"{id}.jpg"
         )
         return False
 
