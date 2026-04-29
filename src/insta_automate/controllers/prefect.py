@@ -186,8 +186,8 @@ class Prefect:
         asyncio.create_task(self.entity_ingest_time_trigger())
         asyncio.create_task(self.entity_scan_trigger())
         asyncio.create_task(self.entity_classify_trigger())
-        asyncio.create_task(self.entity_scrape_trigger())
-        asyncio.create_task(self.entity_follow_trigger())
+        # asyncio.create_task(self.entity_scrape_trigger())
+        # asyncio.create_task(self.entity_follow_trigger())
 
         log.info("Insta Automate Scheduler and Trigerrer started!")
 

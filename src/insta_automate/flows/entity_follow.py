@@ -20,7 +20,7 @@ from insta_automate.vars import FOLLOW_QUEUE_DIR
 
 
 @ia_flow()
-async def entity_follow():
+async def entity_follow(n: int = Limit.FOLLOW_BATCH):
     log = get_run_logger()
     FOLLOW_QUEUE_DIR.mkdir(exist_ok=True, parents=True)
     followed = 0
@@ -29,11 +29,9 @@ async def entity_follow():
         device = await device_ready()
         follow = Follow.fetch(session)
         switch_account("main", device)
-        while (followed < Limit.FOLLOW_BATCH) and (not follow.limit_reached):
-            image = choice(jpegs(FOLLOW_QUEUE_DIR))
-            log.info(
-                f"{followed + 1}/{Limit.FOLLOW_BATCH}: @{image.stem}: Follow triggered"
-            )
+        while (followed < n) and (not follow.limit_reached):
+            image = choice(jpegs(FOLLOW_QUEUE_DIR, shuffle=True))
+            log.info(f"{followed + 1}/{n}: @{image.stem}: Follow triggered")
             if await profile_follow(image.stem, device=device, session=session):
                 follow.increment(session=session)
                 followed += 1

@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from random import shuffle as _shuffle
 from shutil import move as _move
 
 from send2trash import send2trash
@@ -28,5 +29,7 @@ def move(src: Path, dst: Path, replace: bool = False):
     _move(src, dst)
 
 
-def jpegs(folder: Path) -> list[Path]:
-    return list(folder.glob("*.jpg"))
+def jpegs(folder: Path, shuffle: bool = False) -> list[Path]:
+    files = list(folder.glob("*.jpg"))
+    _shuffle(files) if shuffle else None
+    return files
