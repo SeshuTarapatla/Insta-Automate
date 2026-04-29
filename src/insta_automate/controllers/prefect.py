@@ -115,11 +115,12 @@ class Prefect:
                 )
                 await self.wait_day_change(Timestamp().date())
             elif entities := Entity.fetch_queued_entities(self.session):
+                self.inet.wait_for_network()
+                await wait_for_device(self.tl)
                 log.info(f"Total entities queued for scan: {len(entities)}")
                 log.info(
                     f"Trigerring scan for:\n{entities[0].model_dump_json(indent=4)}"
                 )
-                self.inet.wait_for_network()
                 await self.entity_scan.trigger(parameters={"url": entities[0].url})
             await asyncio.sleep(10)
 
@@ -159,6 +160,7 @@ class Prefect:
                 )
                 await self.wait_day_change(Timestamp().date())
             elif jpegs(SCRAPE_QUEUE_DIR):
+                await wait_for_device(self.tl)
                 log.info("Queued entities found to scrape.")
                 await self.entity_scrape.trigger()
                 await self.ping_telegram()
@@ -173,6 +175,7 @@ class Prefect:
                 )
                 await self.wait_day_change(Timestamp().date())
             elif jpegs(FOLLOW_QUEUE_DIR):
+                await wait_for_device(self.tl)
                 log.info("Queued entities found to follow.")
                 await self.entity_follow.trigger()
                 await self.ping_telegram()
