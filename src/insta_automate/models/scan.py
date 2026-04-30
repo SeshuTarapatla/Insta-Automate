@@ -22,7 +22,11 @@ class Scan(SQLModel, table=True):
     @classmethod
     def fetch(cls, session: Session, date: date_ | None = None):
         date = date or Timestamp().date()
-        if scan := session.exec(select(cls).where(cls.date == date)).one_or_none():
+        if scan := session.exec(
+            select(cls)
+            .where(cls.date == date)
+            .execution_options(populate_existing=True)
+        ).one_or_none():
             return scan
         return cls()
 

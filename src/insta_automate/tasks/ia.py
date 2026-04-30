@@ -392,8 +392,10 @@ async def profile_follow(
         return False
 
     if ui.followed_by.exists:
+        msg = f"@{id} is {ui.followed_by.get_text()}"
+        log.error(msg)
         await tl.bot.notify(
-            f"@{id} is {ui.followed_by.get_text()}", file=FOLLOW_QUEUE_DIR / f"{id}.jpg"
+            msg, file=FOLLOW_QUEUE_DIR / f"{id}.jpg"
         )
         return False
 
