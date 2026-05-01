@@ -37,6 +37,9 @@ async def entity_follow(n: int = Limit.FOLLOW_BATCH):
                 followed += 1
             image.unlink()
         device.lock()
+        log.info(
+            f"Follow flow complete. Total followed for today: {follow.followed}/{Limit.FOLLOW}"
+        )
         if follow.limit_reached:
             tl = await IaTelegram.get_client()
             await tl.bot.notify(
