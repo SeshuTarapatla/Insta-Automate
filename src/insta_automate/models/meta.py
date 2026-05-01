@@ -56,6 +56,8 @@ class Limit:
     SCRAPE_BATCH = 10
     FOLLOW = 40
     FOLLOW_BATCH = 5
+    FMIN = 100
+    FMAX = 2000
 
 
 class AccessPrediction(BaseModel):

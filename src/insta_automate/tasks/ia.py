@@ -16,6 +16,7 @@ from insta_automate.models.meta import (
     EntityRequest,
     EntityStatus,
     EntityType,
+    Limit,
     ScanList,
 )
 from insta_automate.models.scanned import Scanned
@@ -289,8 +290,6 @@ async def profile_scrape(
     ui = device.ui
     inet = Internet()
 
-    f_min, f_max = 100, 2500
-
     await ensure_network(device)
     entity = Entity.from_id(id)
 
@@ -318,11 +317,11 @@ async def profile_scrape(
     elif user.p == 0:
         log.error(f"@{id} has zero posts. Skipping scrape.")
         return False
-    elif (_min := min(user.f1, user.f2)) < f_min:
-        log.error(f"@{id} has {_min} < {f_min} followers. Skipping scrape.")
+    elif (_min := min(user.f1, user.f2)) < Limit.FMIN:
+        log.error(f"@{id} has {_min} < {Limit.FMIN} followers. Skipping scrape.")
         return False
-    elif (_max := max(user.f1, user.f2)) > f_max:
-        log.error(f"@{id} has {_max} > {f_max} followers. Skipping scrape.")
+    elif (_max := max(user.f1, user.f2)) > Limit.FMAX:
+        log.error(f"@{id} has {_max} > {Limit.FMAX} followers. Skipping scrape.")
         return False
 
     profile_page = ui.profile_page.screenshot()
@@ -394,9 +393,7 @@ async def profile_follow(
     if ui.followed_by.exists:
         msg = f"@{id} is {ui.followed_by.get_text()}"
         log.error(msg)
-        await tl.bot.notify(
-            msg, file=FOLLOW_QUEUE_DIR / f"{id}.jpg"
-        )
+        await tl.bot.notify(msg, file=FOLLOW_QUEUE_DIR / f"{id}.jpg")
         return False
 
     if ui.profile_follow_button.wait(timeout=5):
