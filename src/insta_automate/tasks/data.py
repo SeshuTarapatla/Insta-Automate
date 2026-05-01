@@ -8,4 +8,7 @@ from insta_automate.tasks import ia_task
 async def db_backup():
     log = get_run_logger()
     log.info("Triggering Insta Automate database backup task...")
-    await _db_backup()
+    try:
+        await _db_backup()
+    except Exception as e:
+        log.error(f"Taking db backup failed:\n{e}")
