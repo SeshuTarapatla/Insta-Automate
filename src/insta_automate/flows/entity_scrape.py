@@ -25,17 +25,16 @@ async def entity_scrape(n: int = Limit.SCRAPE_BATCH):
     log = get_run_logger()
     SCRAPE_QUEUE_DIR.mkdir(exist_ok=True, parents=True)
     SCRAPED_DIR.mkdir(exist_ok=True, parents=True)
-    scraped = 0
+    scraped, processed = 0, 0
     if jpegs(SCRAPE_QUEUE_DIR):
         session = IaSession()
         device = await device_ready()
         scrape = Scrape.fetch(session)
         switch_account("alt", device)
         while (scraped < n) and (not scrape.limit_reached):
+            processed += 1
             image = choice(jpegs(SCRAPE_QUEUE_DIR, shuffle=True))
-            log.info(
-                f"{scraped + 1}/{n}: @{image.stem}: Scrape triggered"
-            )
+            log.info(f"{processed}. {scraped + 1}/{n}: @{image.stem}: Scrape triggered")
             if await profile_scrape(image.stem, device=device, session=session):
                 scrape.increment(session=session)
                 scraped += 1
@@ -43,6 +42,7 @@ async def entity_scrape(n: int = Limit.SCRAPE_BATCH):
                 scrape.increment(session=session, scraped=0)
             image.unlink()
         device.lock()
+        log.info(f"Scrape complete. Processed: {processed}, Scraped: {scraped}")
         if scrape.limit_reached:
             tl = await IaTelegram.get_client()
             await tl.bot.notify(
