@@ -18,11 +18,16 @@ from insta_automate.controllers.postgres import IaSession
 from insta_automate.controllers.telegram import IaTelegram
 from insta_automate.models.entity import Entity
 from insta_automate.models.follow import Follow
+from insta_automate.models.meta import Limit
 from insta_automate.models.scan import Scan
 from insta_automate.models.scrape import Scrape
 from insta_automate.tasks.device import wait_for_device
 from insta_automate.utils import jpegs
-from insta_automate.vars import FOLLOW_QUEUE_DIR, SCANNED_DIR, SCRAPE_QUEUE_DIR
+from insta_automate.vars import (
+    FOLLOW_QUEUE_DIR,
+    SCANNED_DIR,
+    SCRAPED_DIR,
+)
 
 log = get_logger(__name__)
 
@@ -159,9 +164,11 @@ class Prefect:
                     "Scrape limit reached for the day. Pausing trigger until next day."
                 )
                 await self.wait_day_change(Timestamp().date())
-            elif jpegs(SCRAPE_QUEUE_DIR):
+            elif (
+                len(jpegs(SCRAPED_DIR)) + len(jpegs(FOLLOW_QUEUE_DIR))
+            ) < Limit.FOLLOW * 3:
                 await wait_for_device(self.tl)
-                log.info("Queued entities found to scrape.")
+                log.info("Queued entities are requested to scrape.")
                 await self.entity_scrape.trigger()
                 await self.ping_telegram()
             await asyncio.sleep(wait)
