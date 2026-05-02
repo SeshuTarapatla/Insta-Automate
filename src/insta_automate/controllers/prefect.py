@@ -164,9 +164,7 @@ class Prefect:
                     "Scrape limit reached for the day. Pausing trigger until next day."
                 )
                 await self.wait_day_change(Timestamp().date())
-            elif (
-                len(jpegs(SCRAPED_DIR)) + len(jpegs(FOLLOW_QUEUE_DIR))
-            ) < Limit.FOLLOW * 3:
+            elif len(jpegs(SCRAPED_DIR) + jpegs(FOLLOW_QUEUE_DIR)) < Limit.FOLLOW * 3:
                 await wait_for_device(self.tl)
                 log.info("Queued entities are requested to scrape.")
                 await self.entity_scrape.trigger()
@@ -196,7 +194,7 @@ class Prefect:
         asyncio.create_task(self.entity_ingest_time_trigger())
         asyncio.create_task(self.entity_scan_trigger())
         asyncio.create_task(self.entity_classify_trigger())
-        # asyncio.create_task(self.entity_scrape_trigger())
+        asyncio.create_task(self.entity_scrape_trigger())
         asyncio.create_task(self.entity_follow_trigger())
 
         log.info("Insta Automate Scheduler and Trigerrer started!")
