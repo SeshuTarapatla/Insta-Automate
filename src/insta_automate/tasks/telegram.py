@@ -3,7 +3,24 @@ from datetime import date
 from insta_automate.controllers.device import IaDevice
 from insta_automate.controllers.telegram import IaTelegram
 from insta_automate.models.entity import Entity
+from insta_automate.models.telegram import IaMessages
 from insta_automate.tasks import ia_task
+
+
+@ia_task()
+async def notify_scan_limit_reached(dt: date, type: str, value: int):
+    tl = await IaTelegram.get_client()
+    await tl.bot.notify(f"Scan limit reached for **{dt}**. {type.upper()}: {value}")
+
+
+@ia_task()
+async def notify_new_entities_scraped():
+    tl = await IaTelegram.get_client()
+    async for notification in tl.iter_messages_only(
+        tl.notify_channel, search=IaMessages.ENTITIES_SCRAPED
+    ):
+        await notification.delete()
+    await tl.bot.notify(IaMessages.ENTITIES_SCRAPED)
 
 
 @ia_task()
@@ -19,9 +36,3 @@ async def notify_profile_unfollow(entity: Entity):
         f"Scan complete. You can now unfollow **[@{entity.id}]({entity.url})**",
         file=image,
     )
-
-
-@ia_task()
-async def notify_scan_limit_reached(dt: date, type: str, value: int):
-    tl = await IaTelegram.get_client()
-    await tl.bot.notify(f"Scan limit reached for **{dt}**. {type.upper()}: {value}")

@@ -7,3 +7,4 @@ from insta_automate.vars import ANDROID_SERIAL
 class IaMessages:
     DEVICE_DISCONNECTED: str = "No ADB device found! Please connect an android device."
     DEVICE_CONNECTED: str = f"ADB Device connected: {ANDROID_SERIAL}"
+    ENTITIES_SCRAPED: str = "New entities have been scraped. Please check."

@@ -154,8 +154,10 @@ class UserTelegramClient(BaseTelegramClient):
                 f"Failed to add @{bot_username} as admin to Channel(title='{channel.title}')"
             ) from e
 
-    async def iter_messages_only(self, entity: EntityLike, offset: int = 0):
-        async for msg in self.iter_messages(entity, add_offset=offset):
+    async def iter_messages_only(
+        self, entity: EntityLike, offset: int = 0, search: str = cast(str, None)
+    ):
+        async for msg in self.iter_messages(entity, add_offset=offset, search=search):
             if isinstance(msg, PatchedMessage):
                 yield msg
 

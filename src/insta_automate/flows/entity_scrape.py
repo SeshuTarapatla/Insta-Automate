@@ -16,6 +16,7 @@ from insta_automate.tasks.ia import (
     SCRAPED_DIR,
     profile_scrape,
 )
+from insta_automate.tasks.telegram import notify_new_entities_scraped
 from insta_automate.utils import jpegs
 from insta_automate.vars import SCRAPE_QUEUE_DIR
 
@@ -43,6 +44,7 @@ async def entity_scrape(n: int = Limit.SCRAPE_BATCH):
             image.unlink()
         device.lock()
         log.info(f"Scrape complete. Processed: {processed}, Scraped: {scraped}")
+        await notify_new_entities_scraped()
         if scrape.limit_reached:
             tl = await IaTelegram.get_client()
             await tl.bot.notify(
