@@ -1,4 +1,5 @@
 import asyncio
+from datetime import date
 from inspect import isawaitable
 from typing import Any, cast
 
@@ -11,7 +12,6 @@ from prefect.client.schemas.objects import FlowRun, StateType
 from prefect.deployments import run_deployment
 from prefect.flow_runs import wait_for_flow_run
 from telethon.events import NewMessage
-from datetime import date
 
 from insta_automate.controllers.device import IaDevice
 from insta_automate.controllers.postgres import IaSession
@@ -111,24 +111,6 @@ class Prefect:
         while date == Timestamp().date():
             await asyncio.sleep(60)
 
-    async def entity_scan_trigger(self):
-        while True:
-            scan = Scan.fetch(self.session)
-            if scan.limit_reached:
-                log.info(
-                    "Scan limit reached for the day. Pausing trigger until next day."
-                )
-                await self.wait_day_change(Timestamp().date())
-            elif entities := Entity.fetch_queued_entities(self.session):
-                self.inet.wait_for_network()
-                await wait_for_device(self.tl)
-                log.info(f"Total entities queued for scan: {len(entities)}")
-                log.info(
-                    f"Trigerring scan for:\n{entities[0].model_dump_json(indent=4)}"
-                )
-                await self.entity_scan.trigger(parameters={"url": entities[0].url})
-            await asyncio.sleep(10)
-
     async def entity_ingest_trigger(self):
         if self.entity_ingest_queued:
             log.warning(
@@ -156,6 +138,24 @@ class Prefect:
                 await self.ping_telegram()
             await asyncio.sleep(wait)
 
+    async def entity_scan_trigger(self):
+        while True:
+            scan = Scan.fetch(self.session)
+            if scan.limit_reached:
+                log.info(
+                    "Scan limit reached for the day. Pausing trigger until next day."
+                )
+                await self.wait_day_change(Timestamp().date())
+            if entities := Entity.fetch_queued_entities(self.session):
+                self.inet.wait_for_network()
+                await wait_for_device(self.tl)
+                log.info(f"Total entities queued for scan: {len(entities)}")
+                log.info(
+                    f"Trigerring scan for:\n{entities[0].model_dump_json(indent=4)}"
+                )
+                await self.entity_scan.trigger(parameters={"url": entities[0].url})
+            await asyncio.sleep(10)
+
     async def entity_scrape_trigger(self, wait: float = 600):
         while True:
             scrape = Scrape.fetch(self.session)
@@ -164,7 +164,7 @@ class Prefect:
                     "Scrape limit reached for the day. Pausing trigger until next day."
                 )
                 await self.wait_day_change(Timestamp().date())
-            elif len(jpegs(SCRAPED_DIR) + jpegs(FOLLOW_QUEUE_DIR)) < Limit.FOLLOW * 3:
+            if len(jpegs(SCRAPED_DIR) + jpegs(FOLLOW_QUEUE_DIR)) < Limit.FOLLOW * 3:
                 await wait_for_device(self.tl)
                 log.info("Queued entities are requested to scrape.")
                 await self.entity_scrape.trigger()
@@ -179,7 +179,7 @@ class Prefect:
                     "Follow limit reached for the day. Pausing trigger until next day."
                 )
                 await self.wait_day_change(Timestamp().date())
-            elif jpegs(FOLLOW_QUEUE_DIR):
+            if jpegs(FOLLOW_QUEUE_DIR):
                 await wait_for_device(self.tl)
                 log.info("Queued entities found to follow.")
                 await self.entity_follow.trigger()
