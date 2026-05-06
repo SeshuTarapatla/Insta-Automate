@@ -400,7 +400,7 @@ async def profile_follow(
         current = ui.profile_follow_button.get_text()
         match current:
             case EntityRequest.FOLLOW:
-                ui.profile_follow_button.click()
+                ui.profile_follow_action_button.click_gone()
                 log.info(f"@{id} follow successful.")
                 status = True
             case EntityRequest.REQUESTED | EntityRequest.FOLLOWING:

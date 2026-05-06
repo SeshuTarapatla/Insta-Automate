@@ -19,7 +19,7 @@ from wsl_bridge.scrcpy import ScrcpyClient
 
 from insta_automate.exceptions import EntityAccessResolutionError
 from insta_automate.models.entity import Entity, EntityAccess
-from insta_automate.models.meta import EntityType
+from insta_automate.models.meta import EntityRequest, EntityType
 from insta_automate.vars import (
     ANDROID_PIN,
     ANDROID_SERIAL,
@@ -297,6 +297,9 @@ class IaUI:
             "profile_header_familiar_following_value"
         )
         self.profile_follow_button = self.resourceId("profile_header_follow_button")
+        self.profile_follow_action_button = self.device(
+            self._resourceId("profile_header_follow_button"), text=EntityRequest.FOLLOW
+        )
         self.profile_header = self.resourceId("profile_header_container")
         self.profile_id = self.action_bar_title
         self.profile_name = self.resourceId("profile_header_full_name_above_vanity")
