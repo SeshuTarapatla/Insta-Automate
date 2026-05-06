@@ -142,8 +142,7 @@ class IaDevice(Device):
                 self.ui.search_tab.click()
             self.ui.search_bar.click()
             self.send_keys(entity.id, clear=True)
-            self.sleep(1)
-            if (result := self.ui.search_result.child(text=entity.id)).exists:
+            if (result := self.ui.search_result.child(text=entity.id)).wait(timeout=5):
                 result.click()
             else:
                 by_url = True
