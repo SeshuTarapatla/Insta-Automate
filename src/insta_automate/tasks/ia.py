@@ -386,7 +386,7 @@ async def profile_follow(
 
     if device._profile_entity_access() == EntityAccess.PUBLIC:
         log.error(
-            f"@{id} access is found out to be: {EntityAccess.PUBLIC.upper()}. Skipping scrape."
+            f"@{id} access is found out to be: {EntityAccess.PUBLIC.upper()}. Skipping Follow."
         )
         return False
 
@@ -394,6 +394,10 @@ async def profile_follow(
         msg = f"@{id} is {ui.followed_by.get_text()}"
         log.error(msg)
         await tl.bot.notify(msg, file=FOLLOW_QUEUE_DIR / f"{id}.jpg")
+        return False
+
+    if ui.wants_to_follow.exists:
+        log.error(f"@{id} already wants to follow you.")
         return False
 
     if ui.profile_follow_button.wait(timeout=5):

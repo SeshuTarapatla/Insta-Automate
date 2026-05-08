@@ -320,6 +320,7 @@ class IaUI:
         )
         self.profile_avatar_expanded = self.resourceId("expanded_profile_pic")
         self.followed_by = self.text_contains("Followed by")
+        self.wants_to_follow = self.text_contains("wants to follow you")
 
     def pin_digit(self, digit: int | str) -> UiObject:
         return self.device(self._resourceId("vivo_digit_text", "system"), str(digit))
