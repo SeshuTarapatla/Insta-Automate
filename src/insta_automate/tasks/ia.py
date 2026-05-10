@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 
 from my_modules.datetime_utils import Timestamp
@@ -176,14 +177,15 @@ async def profile_entity_scan(
                 )
         entity.update(session)
         await ensure_network(device)
-        device.swipe_list(elements)
+        device.swipe_list(elements, wait=0)
+        await asyncio.sleep(1)
         while True:
             try:
                 ui.follower_container_loader.click_gone()
                 device.press(
                     "back"
                 ) if ui.action_bar_title.get_text() != entity.id else None
-                device.sleep(0.5)
+                await asyncio.sleep(0.5)
                 break
             except Exception:
                 pass
@@ -262,7 +264,8 @@ async def post_entity_scan(
                 )
         entity.update(session)
         await ensure_network(device)
-        device.swipe_list(elements)
+        device.swipe_list(elements, wait=0)
+        await asyncio.sleep(1)
         if current == last:
             break
         else:
@@ -334,7 +337,7 @@ async def profile_scrape(
     while dp_try <= 3:
         dp_try += 1
         ui.profile_avatar.long_click()
-        ui.sleep()
+        await asyncio.sleep(1)
         if ui.profile_avatar_expanded.wait(timeout=5):
             dp = ui.profile_avatar_expanded.screenshot()
             break
@@ -350,7 +353,7 @@ async def profile_scrape(
     log.info(f"Scrape exported to {output}")
 
     device.press("back")
-    device.sleep(buffer)
+    await asyncio.sleep(buffer)
 
     return output
 
@@ -419,5 +422,5 @@ async def profile_follow(
         log.error(f"@{id} follow failed.")
         status = False
 
-    device.sleep(buffer)
+    await asyncio.sleep(buffer)
     return status
