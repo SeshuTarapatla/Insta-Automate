@@ -154,6 +154,7 @@ async def profile_entity_scan(
 
     # start scanning
     while True:
+        device.unlock()
         elements = [
             element
             for element in ui.follower_container
@@ -241,6 +242,7 @@ async def post_entity_scan(
     scanned_set = set()
 
     while True:
+        device.unlock()
         ui.like_container.must_wait()
         elements = [
             element
@@ -394,7 +396,7 @@ async def profile_follow(
         return False
 
     if ui.followed_by.exists:
-        msg = f"@{id} is {ui.followed_by.get_text()}"
+        msg = f"**[@{entity.id}]({entity.url})** is {ui.followed_by.get_text()}"
         log.error(msg)
         await tl.bot.notify(msg, file=FOLLOW_QUEUE_DIR / f"{id}.jpg")
         return False
