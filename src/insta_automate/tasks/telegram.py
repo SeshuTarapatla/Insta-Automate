@@ -7,6 +7,13 @@ from insta_automate.models.telegram import IaMessages
 from insta_automate.tasks import ia_task
 
 
+async def notify_transient(message: str):
+    tl = await IaTelegram.get_client()
+    async for notification in tl.iter_messages_only(tl.notify_channel, search=message):
+        await notification.delete()
+    await tl.bot.notify(message)
+
+
 @ia_task()
 async def notify_scan_limit_reached(dt: date, type: str, value: int):
     tl = await IaTelegram.get_client()
@@ -14,13 +21,13 @@ async def notify_scan_limit_reached(dt: date, type: str, value: int):
 
 
 @ia_task()
+async def notify_new_entities_classified():
+    await notify_transient(IaMessages.ENTITIES_CLASSIFIED)
+
+
+@ia_task()
 async def notify_new_entities_scraped():
-    tl = await IaTelegram.get_client()
-    async for notification in tl.iter_messages_only(
-        tl.notify_channel, search=IaMessages.ENTITIES_SCRAPED
-    ):
-        await notification.delete()
-    await tl.bot.notify(IaMessages.ENTITIES_SCRAPED)
+    await notify_transient(IaMessages.ENTITIES_SCRAPED)
 
 
 @ia_task()

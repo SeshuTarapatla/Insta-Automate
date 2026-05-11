@@ -6,12 +6,13 @@ from prefect import get_run_logger
 from insta_automate.controllers.prefect import IaSession
 from insta_automate.flows import ia_flow
 from insta_automate.tasks.ollama import remove_public, gender_classify
+from insta_automate.tasks.telegram import notify_new_entities_classified
 from insta_automate.utils import jpegs
 from insta_automate.vars import SCANNED_DIR
 
 
 @ia_flow()
-def entity_classify():
+async def entity_classify():
     log = get_run_logger()
     started_at = Timestamp()
     session = IaSession()
@@ -25,6 +26,8 @@ def entity_classify():
         log.info(
             f"AI classification complete. Total entities processed: {total} at {total / (time_taken.total_seconds() or 1):.3} img/s rate. Time taken: {time_taken}. Entities removed: {public}"
         )
+        if gtotal:
+            await notify_new_entities_classified()
     else:
         log.error("No entities found to classify")
 
