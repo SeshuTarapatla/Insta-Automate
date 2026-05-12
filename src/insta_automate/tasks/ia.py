@@ -154,7 +154,8 @@ async def profile_entity_scan(
 
     # start scanning
     while True:
-        device.unlock()
+        if device.locked:
+            device.unlock()
         elements = [
             element
             for element in ui.follower_container
@@ -242,7 +243,8 @@ async def post_entity_scan(
     scanned_set = set()
 
     while True:
-        device.unlock()
+        if device.locked:
+            device.unlock()
         ui.like_container.must_wait()
         elements = [
             element
