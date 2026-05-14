@@ -18,7 +18,7 @@ def move(src: Path, dst: Path, replace: bool = False):
     _move(src, dst)
 
 
-def jpegs(folder: Path, shuffle: bool = False, recursive: bool = False) -> list[Path]:
+def jpegs(folder: Path, shuffle: bool = False, recursive: bool = True) -> list[Path]:
     files = list(folder.rglob("*.jpg") if recursive else folder.glob("*.jpg"))
     _shuffle(files) if shuffle else None
     return files

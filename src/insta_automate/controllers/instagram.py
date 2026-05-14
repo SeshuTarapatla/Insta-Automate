@@ -1,4 +1,6 @@
 class Insta:
+    URL: str = "https://www.instagram.com"
+
     @staticmethod
     def to_int(value: str) -> int:
         value, factor = value.replace(",", "").upper(), 1
@@ -18,4 +20,4 @@ class Insta:
             suffix = f"p/{root.removeprefix('post-')}"
         else:
             suffix = root
-        return f"https://www.instagram.com/{suffix}"
+        return f"{Insta.URL}/{suffix}"
