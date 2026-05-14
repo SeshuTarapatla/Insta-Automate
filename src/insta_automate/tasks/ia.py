@@ -148,7 +148,8 @@ async def profile_entity_scan(
     ui.follower_container.must_wait()
 
     # variable initialization
-    SCANNED_DIR.mkdir(exist_ok=True, parents=True)
+    scanned_dir = SCANNED_DIR / entity.id
+    scanned_dir.mkdir(exist_ok=True, parents=True)
     current, last = "undef", "undef1"
     scanned, added = 0, 0
     scanned_set = set()
@@ -173,7 +174,7 @@ async def profile_entity_scan(
                 scanned_set.add(current)
                 session.add(follower)
                 session.commit()
-                jpeg = SCANNED_DIR / f"{current}.jpg"
+                jpeg = scanned_dir / f"{current}.jpg"
                 element.screenshot().save(jpeg)
                 log.info(
                     f"[{added}/{scanned}] @{current} | Exported to: {jpeg.relative_to(IA_DIR)}"
@@ -238,7 +239,8 @@ async def post_entity_scan(
     ui.likes_drag_bar.drag_to(0, 0)
 
     # variable initialization
-    SCANNED_DIR.mkdir(exist_ok=True, parents=True)
+    scanned_dir = SCANNED_DIR / entity.id
+    scanned_dir.mkdir(exist_ok=True, parents=True)
     current, last = "undef", "undef1"
     scanned, added = 0, 0
     scanned_set = set()
@@ -262,7 +264,7 @@ async def post_entity_scan(
                 added += 1
                 scanned_set.add(current)
                 session.add(like)
-                jpeg = SCANNED_DIR / f"{current}.jpg"
+                jpeg = scanned_dir / f"{current}.jpg"
                 element.screenshot().save(jpeg)
                 log.info(
                     f"[{added}/{scanned}] @{current} | Exported to: {jpeg.relative_to(IA_DIR)}"

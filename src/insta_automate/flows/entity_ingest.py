@@ -8,6 +8,7 @@ from insta_automate.flows import ia_flow
 from insta_automate.tasks.data import db_backup
 from insta_automate.tasks.device import device_ready
 from insta_automate.tasks.ia import add_new_entity
+from insta_automate.vars import ENTITY_DIR
 
 
 @ia_flow()
@@ -16,6 +17,8 @@ async def entity_ingest():
     tl = await IaTelegram.get_client()
     device = await device_ready(tl)
     entity = None
+    
+    ENTITY_DIR.mkdir(exist_ok=True, parents=True)
 
     async for msg in tl.iter_entity_messages():
         try:
