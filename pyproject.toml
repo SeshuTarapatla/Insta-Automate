@@ -39,5 +39,6 @@ wsl-bridge = { git = "https://github.com/SeshuTarapatla/wsl-bridge.git" }
 [dependency-groups]
 dev = [
     "ipykernel>=7.2.0",
+    "pandas>=3.0.3",
     "tg-auth",
 ]

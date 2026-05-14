@@ -4,9 +4,9 @@ from my_modules.datetime_utils import now
 from sqlmodel import Field, SQLModel, Session
 
 from insta_automate.controllers.device import IaUI
+from insta_automate.controllers.instagram import Insta
 from insta_automate.models.meta import EntityAccess
 from insta_automate.models.scanned import Scanned
-from insta_automate.utils import ia_int
 
 
 class User(SQLModel, table=True):
@@ -31,9 +31,9 @@ class User(SQLModel, table=True):
         posts = ui.profile_posts.get_text()
         followers = ui.profile_followers.get_text()
         following = ui.profile_following.get_text()
-        p = ia_int(posts)
-        f1 = ia_int(followers)
-        f2 = ia_int(following)
+        p = Insta.to_int(posts)
+        f1 = Insta.to_int(followers)
+        f2 = Insta.to_int(following)
         if session:
             root = Scanned.fetch(id, session).root
         else:

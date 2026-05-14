@@ -12,24 +12,13 @@ def set_logger_propagation(propagate: bool = True):
             logging.getLogger(name).propagate = propagate
 
 
-def ia_int(value: str) -> int:
-    value, factor = value.replace(",", "").upper(), 1
-    if "M" in value:
-        factor = 1_000_000
-        value = value[:-1]
-    elif "K" in value:
-        factor = 1_000
-        value = value[:-1]
-    return round(float(value) * factor)
-
-
 def move(src: Path, dst: Path, replace: bool = False):
     if replace and dst.exists():
         send2trash(dst)
     _move(src, dst)
 
 
-def jpegs(folder: Path, shuffle: bool = False) -> list[Path]:
-    files = list(folder.glob("*.jpg"))
+def jpegs(folder: Path, shuffle: bool = False, recursive: bool = False) -> list[Path]:
+    files = list(folder.rglob("*.jpg") if recursive else folder.glob("*.jpg"))
     _shuffle(files) if shuffle else None
     return files

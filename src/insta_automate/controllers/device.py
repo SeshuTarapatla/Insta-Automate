@@ -17,12 +17,13 @@ from uiautomator2 import Device
 from uiautomator2._selector import UiObject
 from wsl_bridge.scrcpy import ScrcpyClient
 
-from insta_automate.exceptions import EntityAccessResolutionError
+from insta_automate.exceptions import EntityAccessResolutionError, FailedToSaveEntity
 from insta_automate.models.entity import Entity, EntityAccess
 from insta_automate.models.meta import EntityRequest, EntityType
 from insta_automate.vars import (
     ANDROID_PIN,
     ANDROID_SERIAL,
+    ENTITY_DIR,
     IA_ALT_ACCOUNT,
     IA_MAIN_ACCOUNT,
     IA_PACKAGE_NAME,
@@ -49,6 +50,7 @@ class IaDevice(Device):
         self.package = package
         self.current_user: Literal["main", "alt"] = "alt"
         self.inet = Internet()
+        self.dnd_on()
 
     def wait_for_network(self, buffer: float = 10, unlock: bool = True):
         if self.inet.wait_for_network():
@@ -59,6 +61,12 @@ class IaDevice(Device):
     def lock(self):
         self.screen_off()
         self.sleep(1)
+
+    def dnd_on(self):
+        self.shell("cmd notification set_dnd on")
+
+    def dnd_off(self):
+        self.shell("cmd notification set_dnd off")
 
     @retry(tries=3, delay=5)
     def __call__(
@@ -148,6 +156,16 @@ class IaDevice(Device):
                 by_url = True
         if entity.type != EntityType.PROFILE or by_url:
             self.open_url(entity.url)
+
+    def export_entity(self, entity: Entity, load: bool = False):
+        if load:
+            self.open_entity(entity)
+        fullscreen = self.screenshot()
+        if fullscreen:
+            layout = fullscreen.crop((0, 88, 1080, 2334))
+            layout.save(ENTITY_DIR / f"{entity.id}.jpg")
+        else:
+            raise FailedToSaveEntity(entity.id)
 
     def swipe_list(
         self, elements: list[UiObject], duration: float = 1, wait: float = 1
@@ -273,9 +291,11 @@ class IaUI:
         self.action_bar_title = self.resourceId("action_bar_title")
         self.alt_account = self.text(IA_ALT_ACCOUNT)
         self.back_button = self.content("Back")
+        self.followed_by = self.text_contains("Followed by")
         self.follower_container = self.resourceId("follow_list_container")
         self.follower_container_id = self.resourceId("follow_list_username")
         self.follower_container_loader = self.resourceId("row_load_more_button")
+        self.ia_fullscreen = self.resourceId("layout_container_right")
         self.like_container = self.resourceId("row_user_container_base")
         self.like_container_id = self.resourceId("row_user_primary_name")
         self.likes_drag_bar = self.resourceId("bottom_sheet_drag_handle_prism")
@@ -286,22 +306,27 @@ class IaUI:
         self.post_save_button = self.resourceId("row_feed_button_save")
         self.private_account_banner = self.text("This account is private")
         self.private_profile_banner = self.text("This profile is private")
+        self.profile_avatar = self.resourceId(
+            "profile_header_avatar_container_top_left_stub"
+        )
+        self.profile_avatar_expanded = self.resourceId("expanded_profile_pic")
         self.profile_bio = self.resourceId("profile_user_info_compose_view").child(
             className="android.widget.TextView"
         )
+        self.profile_follow_action_button = self.device(
+            self._resourceId("profile_header_follow_button"), text=EntityRequest.FOLLOW
+        )
+        self.profile_follow_button = self.resourceId("profile_header_follow_button")
         self.profile_followers = self.resourceId(
             "profile_header_familiar_followers_value"
         )
         self.profile_following = self.resourceId(
             "profile_header_familiar_following_value"
         )
-        self.profile_follow_button = self.resourceId("profile_header_follow_button")
-        self.profile_follow_action_button = self.device(
-            self._resourceId("profile_header_follow_button"), text=EntityRequest.FOLLOW
-        )
         self.profile_header = self.resourceId("profile_header_container")
         self.profile_id = self.action_bar_title
         self.profile_name = self.resourceId("profile_header_full_name_above_vanity")
+        self.profile_page = self.resourceId("layout_container_main")
         self.profile_posts = self.resourceId("profile_header_familiar_post_count_value")
         self.profile_tab = self.resourceId("profile_tab")
         self.profile_tabs_container = self.resourceId("profile_tabs_container")
@@ -314,12 +339,6 @@ class IaUI:
             "direct_private_share_action_bar_container_view"
         )
         self.suggested_for_you = self.text("Suggested for you")
-        self.profile_page = self.resourceId("layout_container_main")
-        self.profile_avatar = self.resourceId(
-            "profile_header_avatar_container_top_left_stub"
-        )
-        self.profile_avatar_expanded = self.resourceId("expanded_profile_pic")
-        self.followed_by = self.text_contains("Followed by")
         self.wants_to_follow = self.text_contains("wants to follow you")
 
     def pin_digit(self, digit: int | str) -> UiObject:

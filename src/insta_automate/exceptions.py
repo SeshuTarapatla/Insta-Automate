@@ -32,3 +32,7 @@ class InvalidEntity(RuntimeError):
 
 class EntityAccessResolutionError(TimeoutError):
     """Exception raised when failed to determina access type of a given entity."""
+
+
+class FailedToSaveEntity(RuntimeError):
+    """Exception raised when failed to save an entity screenshot."""

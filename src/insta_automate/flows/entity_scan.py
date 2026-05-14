@@ -32,6 +32,7 @@ async def entity_scan(url: str, list: ScanList = ScanList.AUTO, device: IaDevice
         )
         entity = Entity.from_url(url)
         entity.update(session, access=determine_entity_access(entity))
+        device.export_entity(entity)
     log.info(entity.model_dump_json(indent=4))
     if entity.status == EntityStatus.COMPLETED:
         log.error("This entity has been already scanned.")

@@ -24,6 +24,8 @@ WINDOWS_HOST: str = get_wsl_host_ip()
 # Derived
 ADB_SERVER_SOCKET: str = f"tcp:{WINDOWS_HOST}:5037"
 ELEMENT_HEIGHT: int = 198
+ENTITY_DIR: Path = IA_DIR / "entities"
+FOLLOW_QUEUE_DIR: Path = IA_DIR / "follow_queued"
 GENDER_INVALID_DIR: Path = IA_DIR / "gender_invalid"
 GENDER_VALID_DIR: Path = IA_DIR / "gender_valid"
 IA_BACKUP_CHANNEL: str = "Insta Backup"
@@ -38,4 +40,3 @@ OLLAMA_VL_MODEL: str = "qwen3-vl:4b-instruct"
 SCANNED_DIR: Path = IA_DIR / "scanned"
 SCRAPE_QUEUE_DIR: Path = IA_DIR / "scrape_queued"
 SCRAPED_DIR: Path = IA_DIR / "scraped"
-FOLLOW_QUEUE_DIR: Path = IA_DIR / "follow_queued"

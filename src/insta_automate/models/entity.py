@@ -26,6 +26,19 @@ class Entity(SQLModel, table=True):
     scraped: int = Field(default=0, ge=0)
     status: EntityStatus = EntityStatus.QUEUED
 
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Entity):
+            raise NotImplementedError
+        return self.url == other.url
+
+    def __hash__(self):
+        return hash(self.url)
+
+    def __lt__(self, other):
+        if not isinstance(other, Entity):
+            raise NotImplementedError
+        return self.id < other.id
+
     @field_validator("url")
     @classmethod
     def valid_entity_url(cls, value: str) -> str:
