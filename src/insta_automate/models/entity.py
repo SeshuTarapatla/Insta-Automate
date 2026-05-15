@@ -46,7 +46,7 @@ class Entity(SQLModel, table=True):
         try:
             value = value.replace("/profilecard", "")
             url = urlparse(value)
-            if url.netloc != "www.instagram.com":
+            if url.netloc != Insta.URL:
                 raise InvalidEntityUrl
             return urlunparse(url._replace(query="")).removesuffix("/")
         except Exception:
