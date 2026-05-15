@@ -1,5 +1,6 @@
 class Insta:
-    URL: str = "https://www.instagram.com"
+    NETLOC: str = "www.instagram.com"
+    URL: str = f"https://{NETLOC}"
 
     @staticmethod
     def to_int(value: str) -> int:
