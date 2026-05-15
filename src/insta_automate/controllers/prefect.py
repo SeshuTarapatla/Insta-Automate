@@ -3,6 +3,7 @@ from datetime import date
 from inspect import isawaitable
 from typing import Any, cast
 
+from dotenv import get_key
 from my_modules.datetime_utils import Timestamp
 from my_modules.helpers import handle_await
 from my_modules.inet import Internet
@@ -27,6 +28,7 @@ from insta_automate.vars import (
     FOLLOW_QUEUE_DIR,
     SCANNED_DIR,
     SCRAPED_DIR,
+    TRIGGERS,
 )
 
 log = get_logger(__name__)
@@ -36,6 +38,7 @@ class Deployment:
     def __init__(self, flow: str, deployment: str | None = None) -> None:
         self.flow = flow
         self.deployment = f"{deployment or flow}/{flow}"
+        self._switch = self.flow.upper().replace("-", "_")
 
     def __repr__(self) -> str:
         return f"Deployment('{self.deployment}')"
@@ -43,9 +46,15 @@ class Deployment:
     def __str__(self) -> str:
         return self.__repr__()
 
+    def switch(self) -> bool:
+        return get_key(TRIGGERS, self._switch) != "0"
+
     async def trigger(
         self, wait: bool = True, parameters: dict[str, Any] = {}, retries: int = 3
     ) -> FlowRun | None:
+        if not self.switch():
+            log.warning(f"Flow switch `{self._switch}` is OFF. Skipping trigger.")
+            return 
         attempt = 1
         while attempt <= retries:
             try:
