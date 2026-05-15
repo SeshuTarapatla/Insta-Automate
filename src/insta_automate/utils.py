@@ -35,4 +35,4 @@ def rm_empty_subdirs(dir: Path = IA_DIR, log: logging.Logger = get_logger(__name
     ]
     if empty_dirs:
         log.warning(f"Deleting these empty subdirectories: {empty_dirs}")
-        [subdir.rmdir() for subdir in empty_dirs]
+        [send2trash(subdir) for subdir in empty_dirs]
