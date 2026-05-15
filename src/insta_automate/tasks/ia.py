@@ -75,6 +75,7 @@ def scan_entity_init(
         log.error("Entity is private locked. Cannot proceed with scan.")
         entity.update(session, access=EntityAccess.PRIVATE, status=EntityStatus.FAILED)
         return False
+    device.export_entity(entity)
     return True
 
 
@@ -91,7 +92,6 @@ def add_new_entity(url: str, device: IaDevice | None = None) -> Entity:
             log.info(f"Entity type is determined to be: {entity.type.upper()}")
             log.info("Determing entity access type...")
             entity.access = device.determine_entity_access(entity)
-            device.export_entity(entity)
             log.info(f"Entity access type is determined to be: {entity.access.upper()}")
             log.info(entity.model_dump_json(indent=4))
             log.info("Adding entry to Entity table.")
