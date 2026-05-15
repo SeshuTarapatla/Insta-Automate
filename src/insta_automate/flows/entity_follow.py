@@ -6,8 +6,11 @@ from my_modules.datetime_utils import Timestamp
 from prefect import get_run_logger
 
 from insta_automate.controllers.cli import IaTelegram
+from insta_automate.controllers.instagram import Insta
 from insta_automate.controllers.prefect import IaSession
+from insta_automate.exceptions import InvalidEntity
 from insta_automate.flows import ia_flow
+from insta_automate.models.entity import Entity
 from insta_automate.models.follow import Follow
 from insta_automate.models.meta import Limit
 from insta_automate.tasks.data import db_backup
@@ -20,19 +23,32 @@ from insta_automate.vars import FOLLOW_QUEUE_DIR
 
 
 @ia_flow()
-async def entity_follow(n: int = Limit.FOLLOW_BATCH):
+async def entity_follow(entity: str | None = None, n: int = Limit.FOLLOW_BATCH):
     log = get_run_logger()
-    FOLLOW_QUEUE_DIR.mkdir(exist_ok=True, parents=True)
+    if entity:
+        _entity = Entity.from_url(
+            entity if entity.startswith(Insta.URL) else Insta.url(entity)
+        )
+        if (follow_queue_dir := (FOLLOW_QUEUE_DIR / _entity.id)).exists():
+            log.info(f"Following from custom entity: {entity}")
+        else:
+            raise InvalidEntity(f"No directory found for entity: {entity} to follow.")
+    else:
+        follow_queue_dir = FOLLOW_QUEUE_DIR
+    follow_queue_dir.mkdir(exist_ok=True, parents=True)
     followed = 0
-    if jpegs(FOLLOW_QUEUE_DIR):
+    if jpegs(follow_queue_dir):
         session = IaSession()
         device = await device_ready()
         follow = Follow.fetch(session)
         switch_account("main", device)
         while (followed < n) and (not follow.limit_reached):
-            image = choice(jpegs(FOLLOW_QUEUE_DIR, shuffle=True))
+            image = choice(jpegs(follow_queue_dir, shuffle=True) or [None])
+            if not image:
+                log.warning("No more entities found to follow.")
+                break
             log.info(f"{followed + 1}/{n}: @{image.stem}: Follow triggered")
-            if await profile_follow(image.stem, device=device, session=session):
+            if await profile_follow(image, device=device, session=session):
                 follow.increment(session=session)
                 followed += 1
             image.unlink()

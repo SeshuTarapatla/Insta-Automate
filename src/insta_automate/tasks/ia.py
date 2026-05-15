@@ -26,7 +26,6 @@ from insta_automate.tasks import ia_task
 from insta_automate.tasks.device import network_access, switch_account_for_entity
 from insta_automate.vars import (
     ELEMENT_HEIGHT,
-    FOLLOW_QUEUE_DIR,
     IA_DIR,
     SCANNED_DIR,
     SCRAPE_QUEUE_DIR,
@@ -370,7 +369,7 @@ async def profile_scrape(
 
 @ia_task()
 async def profile_follow(
-    id: str,
+    img: Path,
     buffer: float = 5,
     device: IaDevice | None = None,
     session: Session | None = None,
@@ -381,6 +380,7 @@ async def profile_follow(
     session = session or IaSession()
     tl = tl or await IaTelegram.get_client()
     ui = device.ui
+    id = img.stem
     inet = Internet()
 
     await ensure_network(device)
@@ -406,7 +406,7 @@ async def profile_follow(
     if ui.followed_by.exists:
         msg = f"**[@{entity.id}]({entity.url})** is {ui.followed_by.get_text()}"
         log.error(msg)
-        await tl.bot.notify(msg, file=FOLLOW_QUEUE_DIR / f"{id}.jpg")
+        await tl.bot.notify(msg, file=img)
         return False
 
     if ui.wants_to_follow.exists:

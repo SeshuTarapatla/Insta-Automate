@@ -28,10 +28,8 @@ async def entity_scrape(entity: str | None = None, n: int = Limit.SCRAPE_BATCH):
     log = get_run_logger()
     scraped, processed = 0, 0
     if entity:
-        _entity = (
-            Entity.from_url(entity)
-            if entity.startswith(Insta.URL)
-            else Entity.from_id(entity)
+        _entity = Entity.from_url(
+            entity if entity.startswith(Insta.URL) else Insta.url(entity)
         )
         if (scrape_queue_dir := (SCRAPE_QUEUE_DIR / _entity.id)).exists():
             scraped_dir = SCRAPED_DIR / _entity.id
@@ -56,9 +54,7 @@ async def entity_scrape(entity: str | None = None, n: int = Limit.SCRAPE_BATCH):
                 log.warning("No more entities found to scrape.")
                 break
             log.info(f"{processed}. {scraped + 1}/{n}: @{image.stem}: Scrape triggered")
-            if await profile_scrape(
-                image, device=device, session=session
-            ):
+            if await profile_scrape(image, device=device, session=session):
                 scrape.increment(session=session)
                 scraped += 1
             else:
