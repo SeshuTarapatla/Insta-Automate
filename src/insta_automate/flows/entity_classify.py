@@ -7,7 +7,7 @@ from insta_automate.controllers.prefect import IaSession
 from insta_automate.flows import ia_flow
 from insta_automate.tasks.ollama import remove_public, gender_classify
 from insta_automate.tasks.telegram import notify_new_entities_classified
-from insta_automate.utils import jpegs
+from insta_automate.utils import jpegs, rm_empty_subdirs
 from insta_automate.vars import SCANNED_DIR
 
 
@@ -28,6 +28,7 @@ async def entity_classify():
         )
         if gtotal:
             await notify_new_entities_classified()
+        rm_empty_subdirs()
     else:
         log.error("No entities found to classify")
 

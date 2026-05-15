@@ -19,7 +19,7 @@ from insta_automate.tasks.ia import (
     profile_scrape,
 )
 from insta_automate.tasks.telegram import notify_new_entities_scraped
-from insta_automate.utils import jpegs
+from insta_automate.utils import jpegs, rm_empty_subdirs
 from insta_automate.vars import SCRAPE_QUEUE_DIR, SCRAPED_DIR
 
 
@@ -57,7 +57,7 @@ async def entity_scrape(entity: str | None = None, n: int = Limit.SCRAPE_BATCH):
                 break
             log.info(f"{processed}. {scraped + 1}/{n}: @{image.stem}: Scrape triggered")
             if await profile_scrape(
-                image.stem, scraped_dir, device=device, session=session
+                image, device=device, session=session
             ):
                 scrape.increment(session=session)
                 scraped += 1
@@ -73,6 +73,7 @@ async def entity_scrape(entity: str | None = None, n: int = Limit.SCRAPE_BATCH):
                 f"Scrape limit reached for {Timestamp().date()}. Limit: {scrape.scraped}"
             )
         await db_backup()
+        rm_empty_subdirs()
     else:
         log.error("No entities found to scrape")
 

@@ -15,7 +15,7 @@ from insta_automate.tasks.device import device_ready, switch_account
 from insta_automate.tasks.ia import (
     profile_follow,
 )
-from insta_automate.utils import jpegs
+from insta_automate.utils import jpegs, rm_empty_subdirs
 from insta_automate.vars import FOLLOW_QUEUE_DIR
 
 
@@ -46,6 +46,7 @@ async def entity_follow(n: int = Limit.FOLLOW_BATCH):
                 f"Follow limit reached for {Timestamp().date()}. Limit: {follow.followed}"
             )
         await db_backup()
+        rm_empty_subdirs()
     else:
         log.error("No entities found to follow")
 

@@ -12,7 +12,7 @@ from insta_automate.controllers.prefect import IaSession
 from insta_automate.models.meta import EntityAccess, Gender
 from insta_automate.models.scanned import Scanned
 from insta_automate.tasks import ia_task
-from insta_automate.utils import jpegs, move
+from insta_automate.utils import jpegs, move, rm_empty_subdirs
 from insta_automate.vars import (
     GENDER_INVALID_DIR,
     GENDER_VALID_DIR,
@@ -75,6 +75,10 @@ def gender_classify(session: Session | None = None) -> tuple[int, int, int]:
     GENDER_INVALID_DIR.mkdir(exist_ok=True, parents=True)
     total, male, female, failed = len(entities), 0, 0, 0
 
+    for subdir in set(jpg.parent for jpg in entities):
+        (GENDER_INVALID_DIR / subdir.name).mkdir(exist_ok=True, parents=True)
+        (GENDER_VALID_DIR / subdir.name).mkdir(exist_ok=True, parents=True)
+
     for i, entity in enumerate(entities, start=1):
         scanned = Scanned.fetch(entity.stem, session)
         scanned.gender = classifier.predict(entity).result
@@ -86,13 +90,22 @@ def gender_classify(session: Session | None = None) -> tuple[int, int, int]:
         match scanned.gender:
             case Gender.FEMALE:
                 female += 1
-                move(entity, GENDER_VALID_DIR / entity.name, replace=True)
+                move(
+                    entity,
+                    GENDER_VALID_DIR / entity.relative_to(SCANNED_DIR),
+                    replace=True,
+                )
             case Gender.MALE:
                 male += 1
-                move(entity, GENDER_INVALID_DIR / entity.name, replace=True)
+                move(
+                    entity,
+                    GENDER_INVALID_DIR / entity.relative_to(SCANNED_DIR),
+                    replace=True,
+                )
             case _:
                 failed += 1
                 log.error(f"Failed to predict gender of @{scanned.id}")
+    rm_empty_subdirs()
     log.info(
         f"Total entities parsed: {total}. Stats: FEMALE={female}, MALE={male}, FAILED={failed}"
     )

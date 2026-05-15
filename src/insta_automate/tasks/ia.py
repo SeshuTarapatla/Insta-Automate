@@ -29,6 +29,8 @@ from insta_automate.vars import (
     FOLLOW_QUEUE_DIR,
     IA_DIR,
     SCANNED_DIR,
+    SCRAPE_QUEUE_DIR,
+    SCRAPED_DIR,
 )
 
 
@@ -288,8 +290,7 @@ async def post_entity_scan(
 
 @ia_task()
 async def profile_scrape(
-    id: str,
-    scraped_dir: Path,
+    img: Path,
     buffer: float = 5,
     device: IaDevice | None = None,
     session: Session | None = None,
@@ -298,6 +299,7 @@ async def profile_scrape(
     device = device or IaDevice()
     session = session or IaSession()
     ui = device.ui
+    id = img.stem
     inet = Internet()
 
     await ensure_network(device)
@@ -355,7 +357,8 @@ async def profile_scrape(
     profile_report.paste(dp_resized)
     profile_report.paste(profile_header, (0, dp_resized.height))
 
-    output = scraped_dir / f"{id}.jpg"
+    output = SCRAPED_DIR / img.relative_to(SCRAPE_QUEUE_DIR)
+    output.parent.mkdir(exist_ok=True, parents=True)
     profile_report.save(output)
     log.info(f"Scrape exported to {output}")
 

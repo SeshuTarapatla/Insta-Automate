@@ -8,6 +8,7 @@ from insta_automate.flows import ia_flow
 from insta_automate.tasks.data import db_backup
 from insta_automate.tasks.device import device_ready
 from insta_automate.tasks.ia import add_new_entity
+from insta_automate.utils import rm_empty_subdirs
 from insta_automate.vars import ENTITY_DIR
 
 
@@ -28,6 +29,7 @@ async def entity_ingest():
         await tl.delete_message(msg)
 
     if entity:
+        rm_empty_subdirs()
         device.lock()
         await db_backup()
     else:
