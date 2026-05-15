@@ -8,6 +8,7 @@ from pydantic import field_validator, model_validator
 from sqlalchemy import func
 from sqlmodel import Field, Session, SQLModel, case, select
 
+from insta_automate.controllers.instagram import Insta
 from insta_automate.exceptions import InvalidEntityUrl
 from insta_automate.models.meta import EntityAccess, EntityStatus, EntityType
 from insta_automate.models.scanned import Scanned
@@ -96,7 +97,7 @@ class Entity(SQLModel, table=True):
 
     @classmethod
     def from_id(cls, id: str):
-        return cls.model_validate(cls(url=f"https://www.instagram.com/{id}"))
+        return cls.model_validate(cls(url=Insta.url(id)))
 
     @classmethod
     def entity_priority_order(cls):
