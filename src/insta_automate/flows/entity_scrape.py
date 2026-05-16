@@ -27,7 +27,7 @@ from insta_automate.vars import SCRAPE_QUEUE_DIR, SCRAPED_DIR
 async def entity_scrape(entity: str | None = None, n: int = Limit.SCRAPE_BATCH):
     log = get_run_logger()
     scraped, processed = 0, 0
-    entity = entity or entity_choice(SCRAPE_QUEUE_DIR)
+    entity = entity or entity_choice("SCRAPE_ENTITY")
     if entity:
         _entity = Entity.from_url(
             entity if entity.startswith(Insta.URL) else Insta.url(entity)

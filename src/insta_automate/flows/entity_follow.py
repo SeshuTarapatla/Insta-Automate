@@ -25,7 +25,7 @@ from insta_automate.vars import FOLLOW_QUEUE_DIR
 @ia_flow()
 async def entity_follow(entity: str | None = None, n: int = Limit.FOLLOW_BATCH):
     log = get_run_logger()
-    entity = entity or entity_choice(FOLLOW_QUEUE_DIR)
+    entity = entity or entity_choice("FOLLOW_ENTITY")
     if entity:
         _entity = Entity.from_url(
             entity if entity.startswith(Insta.URL) else Insta.url(entity)
