@@ -9,7 +9,7 @@ from insta_automate.controllers.cli import IaTelegram
 from insta_automate.controllers.instagram import Insta
 from insta_automate.controllers.prefect import IaSession
 from insta_automate.exceptions import InvalidEntity
-from insta_automate.flows import ia_flow
+from insta_automate.flows import entity_choice, ia_flow
 from insta_automate.models.entity import Entity
 from insta_automate.models.follow import Follow
 from insta_automate.models.meta import Limit
@@ -25,6 +25,7 @@ from insta_automate.vars import FOLLOW_QUEUE_DIR
 @ia_flow()
 async def entity_follow(entity: str | None = None, n: int = Limit.FOLLOW_BATCH):
     log = get_run_logger()
+    entity = entity or entity_choice(FOLLOW_QUEUE_DIR)
     if entity:
         _entity = Entity.from_url(
             entity if entity.startswith(Insta.URL) else Insta.url(entity)
@@ -37,7 +38,7 @@ async def entity_follow(entity: str | None = None, n: int = Limit.FOLLOW_BATCH):
         follow_queue_dir = FOLLOW_QUEUE_DIR
     follow_queue_dir.mkdir(exist_ok=True, parents=True)
     followed = 0
-    if jpegs(follow_queue_dir):
+    if jpegs(FOLLOW_QUEUE_DIR):
         session = IaSession()
         device = await device_ready()
         follow = Follow.fetch(session)
@@ -45,8 +46,11 @@ async def entity_follow(entity: str | None = None, n: int = Limit.FOLLOW_BATCH):
         while (followed < n) and (not follow.limit_reached):
             image = choice(jpegs(follow_queue_dir, shuffle=True) or [None])
             if not image:
-                log.warning("No more entities found to follow.")
-                break
+                log.warning(
+                    f"No more entities found to follow in {follow_queue_dir}. Resetting back to {FOLLOW_QUEUE_DIR}."
+                )
+                follow_queue_dir = FOLLOW_QUEUE_DIR
+                continue
             log.info(f"{followed + 1}/{n}: @{image.stem}: Follow triggered")
             if await profile_follow(image, device=device, session=session):
                 follow.increment(session=session)

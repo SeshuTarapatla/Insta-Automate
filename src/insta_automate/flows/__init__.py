@@ -2,9 +2,11 @@ __all__ = ["ia_flow"]
 
 import asyncio
 from importlib import import_module
+from pathlib import Path
 from pkgutil import iter_modules
 from typing import cast
 
+from dotenv import get_key
 from my_modules.datetime_utils import Timestamp
 from my_modules.helpers import handle_await
 from my_modules.logger import get_logger
@@ -12,8 +14,8 @@ from prefect import Flow, flow
 from prefect.runner.storage import GitRepository
 from prefect.runtime import flow_run
 
-from insta_automate.utils import set_logger_propagation
-from insta_automate.vars import GIT_URL, IA_PREFECT_WORKPOOL
+from insta_automate.utils import jpegs, set_logger_propagation
+from insta_automate.vars import GIT_URL, IA_PREFECT_WORKPOOL, TRIGGERS
 
 log = get_logger(__name__)
 
@@ -29,6 +31,14 @@ def ia_flow(
         flow_run_name=flow_run_name,
         **kwargs,
     )
+
+
+def entity_choice(base: Path) -> str | None:
+    entity = get_key(TRIGGERS, "ENTITY")
+    if entity:
+        entity_dir = base / entity
+        if entity_dir.exists() and jpegs(entity_dir):
+            return entity
 
 
 class IaFlows:

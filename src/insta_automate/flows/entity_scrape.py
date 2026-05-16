@@ -9,7 +9,7 @@ from insta_automate.controllers.cli import IaTelegram
 from insta_automate.controllers.instagram import Insta
 from insta_automate.controllers.prefect import IaSession
 from insta_automate.exceptions import InvalidEntity
-from insta_automate.flows import ia_flow
+from insta_automate.flows import entity_choice, ia_flow
 from insta_automate.models.entity import Entity
 from insta_automate.models.meta import Limit
 from insta_automate.models.scrape import Scrape
@@ -27,6 +27,7 @@ from insta_automate.vars import SCRAPE_QUEUE_DIR, SCRAPED_DIR
 async def entity_scrape(entity: str | None = None, n: int = Limit.SCRAPE_BATCH):
     log = get_run_logger()
     scraped, processed = 0, 0
+    entity = entity or entity_choice(SCRAPE_QUEUE_DIR)
     if entity:
         _entity = Entity.from_url(
             entity if entity.startswith(Insta.URL) else Insta.url(entity)
@@ -42,7 +43,7 @@ async def entity_scrape(entity: str | None = None, n: int = Limit.SCRAPE_BATCH):
 
     scrape_queue_dir.mkdir(exist_ok=True, parents=True)
     scraped_dir.mkdir(exist_ok=True, parents=True)
-    if jpegs(scrape_queue_dir):
+    if jpegs(SCRAPE_QUEUE_DIR):
         session = IaSession()
         device = await device_ready()
         scrape = Scrape.fetch(session)
@@ -51,8 +52,11 @@ async def entity_scrape(entity: str | None = None, n: int = Limit.SCRAPE_BATCH):
             processed += 1
             image = choice(jpegs(scrape_queue_dir, shuffle=True) or [None])
             if not image:
-                log.warning("No more entities found to scrape.")
-                break
+                log.warning(
+                    f"No more entities found to scrape in {scrape_queue_dir}. Resetting back to {SCRAPE_QUEUE_DIR}."
+                )
+                scrape_queue_dir = SCRAPE_QUEUE_DIR
+                continue
             log.info(f"{processed}. {scraped + 1}/{n}: @{image.stem}: Scrape triggered")
             if await profile_scrape(image, device=device, session=session):
                 scrape.increment(session=session)
