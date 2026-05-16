@@ -2,7 +2,6 @@ __all__ = ["ia_flow"]
 
 import asyncio
 from importlib import import_module
-from pathlib import Path
 from pkgutil import iter_modules
 from typing import Literal, cast
 
@@ -39,11 +38,13 @@ def entity_choice(entity: Literal["FOLLOW_ENTITY", "SCRAPE_ENTITY"]) -> str | No
             base = FOLLOW_QUEUE_DIR
         case "SCRAPE_ENTITY":
             base = SCRAPE_QUEUE_DIR
-    choice = get_key(TRIGGERS, entity)
-    if choice:
-        choice_dir = base / choice
-        if choice_dir.exists() and jpegs(choice_dir):
-            return choice
+    choices = get_key(TRIGGERS, entity)
+    if choices:
+        choices = [choice.strip() for choice in choices.split(",")]
+        for choice in choices:
+            choice_dir = base / choice
+            if choice_dir.exists() and jpegs(choice_dir):
+                return choice
 
 
 class IaFlows:
