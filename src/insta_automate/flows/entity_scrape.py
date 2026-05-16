@@ -49,14 +49,14 @@ async def entity_scrape(entity: str | None = None, n: int = Limit.SCRAPE_BATCH):
         scrape = Scrape.fetch(session)
         switch_account("alt", device)
         while (scraped < n) and (not scrape.limit_reached):
-            processed += 1
             image = choice(jpegs(scrape_queue_dir, shuffle=True) or [None])
             if not image:
                 log.warning(
-                    f"No more entities found to scrape in {scrape_queue_dir}. Resetting back to {SCRAPE_QUEUE_DIR}."
+                    f"No more entities found to scrape in {scrape_queue_dir.name}. Resetting back to {SCRAPE_QUEUE_DIR.name}."
                 )
                 scrape_queue_dir = SCRAPE_QUEUE_DIR
                 continue
+            processed += 1
             log.info(f"{processed}. {scraped + 1}/{n}: @{image.stem}: Scrape triggered")
             if await profile_scrape(image, device=device, session=session):
                 scrape.increment(session=session)

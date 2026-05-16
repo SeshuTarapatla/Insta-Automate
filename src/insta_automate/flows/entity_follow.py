@@ -37,7 +37,7 @@ async def entity_follow(entity: str | None = None, n: int = Limit.FOLLOW_BATCH):
     else:
         follow_queue_dir = FOLLOW_QUEUE_DIR
     follow_queue_dir.mkdir(exist_ok=True, parents=True)
-    followed = 0
+    followed, processed = 0, 0
     if jpegs(FOLLOW_QUEUE_DIR):
         session = IaSession()
         device = await device_ready()
@@ -47,11 +47,14 @@ async def entity_follow(entity: str | None = None, n: int = Limit.FOLLOW_BATCH):
             image = choice(jpegs(follow_queue_dir, shuffle=True) or [None])
             if not image:
                 log.warning(
-                    f"No more entities found to follow in {follow_queue_dir}. Resetting back to {FOLLOW_QUEUE_DIR}."
+                    f"No more entities found to follow in {follow_queue_dir.name}. Resetting back to {FOLLOW_QUEUE_DIR.name}."
                 )
                 follow_queue_dir = FOLLOW_QUEUE_DIR
                 continue
-            log.info(f"{followed + 1}/{n}: @{image.stem}: Follow triggered")
+            processed += 1
+            log.info(
+                f"{processed}. {followed + 1}/{n}: @{image.stem}: Follow triggered"
+            )
             if await profile_follow(image, device=device, session=session):
                 follow.increment(session=session)
                 followed += 1
