@@ -192,7 +192,8 @@ async def profile_entity_scan(
                 await asyncio.sleep(0.5)
                 break
             except Exception:
-                pass
+                if device.locked:
+                    device.unlock()
         if current == last and ui.suggested_for_you.exists:
             break
         else:
