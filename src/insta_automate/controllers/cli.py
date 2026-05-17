@@ -1,6 +1,7 @@
 __all__ = ["ia"]
 
 from async_typer import AsyncTyper
+from dotenv import get_key, set_key
 from my_modules.logger import get_logger
 from typer import Option
 
@@ -11,7 +12,9 @@ from insta_automate.controllers.telegram import IaTelegram
 from insta_automate.flows import IaFlows
 from insta_automate.vars import (
     BANNER,
+    ENTITY_DIR,
     IA_DOCKER_IMAGE,
+    TRIGGERS,
 )
 
 log = get_logger(__name__)
@@ -101,3 +104,25 @@ async def prefect_serve():
 @prefect.async_command(name="deploy", help="Deploy all Insta Automate flows.")
 async def prefect_deploy():
     await IaFlows.deploy_all()
+
+
+@ia.command(
+    name="add", help="Append an entity to the preference queue."
+)
+def append_entity(entity: str):
+    if not (ENTITY_DIR / f"{entity}.jpg").exists():
+        log.error(f"Entity: [bold red]{entity}[/] does not exist.")
+        return False
+    for key in ("SCRAPE_ENTITY", "FOLLOW_ENTITY"):
+        if values := get_key(TRIGGERS, key):
+            values = [value.strip() for value in values.split(",")]
+            if entity in values:
+                log.warning(
+                    f"Entity: [bold yellow]{entity}[/] already exists in [cyan]'{key}'[/] queue."
+                )
+            else:
+                values.append(entity)
+                set_key(TRIGGERS, key, ",".join(values))
+                log.info(
+                    f"Entity: [bold blue]{entity}[/] appended to [cyan]'{key}'[/] queue."
+                )
