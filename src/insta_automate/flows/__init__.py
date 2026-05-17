@@ -5,7 +5,7 @@ from importlib import import_module
 from pkgutil import iter_modules
 from typing import Literal, cast
 
-from dotenv import get_key
+from dotenv import get_key, set_key
 from my_modules.datetime_utils import Timestamp
 from my_modules.helpers import handle_await
 from my_modules.logger import get_logger
@@ -14,7 +14,13 @@ from prefect.runner.storage import GitRepository
 from prefect.runtime import flow_run
 
 from insta_automate.utils import jpegs, set_logger_propagation
-from insta_automate.vars import FOLLOW_QUEUE_DIR, GIT_URL, IA_PREFECT_WORKPOOL, SCRAPE_QUEUE_DIR, TRIGGERS
+from insta_automate.vars import (
+    FOLLOW_QUEUE_DIR,
+    GIT_URL,
+    IA_PREFECT_WORKPOOL,
+    SCRAPE_QUEUE_DIR,
+    TRIGGERS,
+)
 
 log = get_logger(__name__)
 
@@ -41,10 +47,12 @@ def entity_choice(entity: Literal["FOLLOW_ENTITY", "SCRAPE_ENTITY"]) -> str | No
     choices = get_key(TRIGGERS, entity)
     if choices:
         choices = [choice.strip() for choice in choices.split(",")]
-        for choice in choices:
+        for index, choice in enumerate(choices, start=1):
             choice_dir = base / choice
             if choice_dir.exists() and jpegs(choice_dir):
                 return choice
+            else:
+                set_key(TRIGGERS, entity, ",".join(choices[index:]))
 
 
 class IaFlows:
