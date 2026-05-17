@@ -150,7 +150,12 @@ class IaDevice(Device):
                 self.ui.search_tab.click()
             self.ui.search_bar.click()
             self.send_keys(entity.id, clear=True)
-            if (result := self.ui.search_result.child(text=entity.id)).wait(timeout=5):
+            if (
+                result := self.ui.search_result.child(
+                    text=entity.id,
+                    resourceId=self.ui._resourceId("row_search_user_username"),
+                )
+            ).wait(timeout=5):
                 result.click()
             else:
                 by_url = True
