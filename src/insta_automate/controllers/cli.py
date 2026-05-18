@@ -106,9 +106,7 @@ async def prefect_deploy():
     await IaFlows.deploy_all()
 
 
-@ia.command(
-    name="add", help="Append an entity to the preference queue."
-)
+@ia.command(name="add", help="Append an entity to the preference queue.")
 def append_entity(entity: str):
     if not (ENTITY_DIR / f"{entity}.jpg").exists():
         log.error(f"Entity: [bold red]{entity}[/] does not exist.")
@@ -120,9 +118,11 @@ def append_entity(entity: str):
                 log.warning(
                     f"Entity: [bold yellow]{entity}[/] already exists in [cyan]'{key}'[/] queue."
                 )
+                return False
             else:
                 values.append(entity)
                 set_key(TRIGGERS, key, ",".join(values))
                 log.info(
                     f"Entity: [bold blue]{entity}[/] appended to [cyan]'{key}'[/] queue."
                 )
+                return True

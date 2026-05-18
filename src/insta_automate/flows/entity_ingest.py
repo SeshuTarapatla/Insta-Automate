@@ -3,6 +3,7 @@
 from prefect import get_run_logger
 from pydantic import ValidationError
 
+from insta_automate.controllers.cli import append_entity
 from insta_automate.controllers.telegram import IaTelegram
 from insta_automate.flows import ia_flow
 from insta_automate.tasks.data import db_backup
@@ -18,12 +19,16 @@ async def entity_ingest():
     tl = await IaTelegram.get_client()
     device = await device_ready(tl)
     entity = None
-    
+
     ENTITY_DIR.mkdir(exist_ok=True, parents=True)
 
     async for msg in tl.iter_entity_messages():
         try:
-            entity = add_new_entity(str(msg.text), device)
+            text = str(msg.text)
+            if (ENTITY_DIR / f"{text}.jpg").exists():
+                entity = append_entity(str(text))
+            else:
+                entity = add_new_entity(str(text), device)
         except ValidationError:
             log.error(f"Message(text='{msg.text}') is not a valid entity url.")
         await tl.delete_message(msg)
