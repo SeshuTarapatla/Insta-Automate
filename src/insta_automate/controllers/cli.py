@@ -1,5 +1,7 @@
 __all__ = ["ia"]
 
+from typing import Literal
+
 from async_typer import AsyncTyper
 from dotenv import get_key, set_key
 from my_modules.logger import get_logger
@@ -107,10 +109,11 @@ async def prefect_deploy():
 
 
 @ia.command(name="add", help="Append an entity to the preference queue.")
-def append_entity(entity: str):
+def append_entity(entity: str) -> Literal[-1,0,1]:
     if not (ENTITY_DIR / f"{entity}.jpg").exists():
         log.error(f"Entity: [bold red]{entity}[/] does not exist.")
-        return False
+        return -1
+    flag = 0
     for key in ("SCRAPE_ENTITY", "FOLLOW_ENTITY"):
         if values := get_key(TRIGGERS, key):
             values = [value.strip() for value in values.split(",")]
@@ -118,11 +121,11 @@ def append_entity(entity: str):
                 log.warning(
                     f"Entity: [bold yellow]{entity}[/] already exists in [cyan]'{key}'[/] queue."
                 )
-                return False
             else:
                 values.append(entity)
                 set_key(TRIGGERS, key, ",".join(values))
                 log.info(
                     f"Entity: [bold blue]{entity}[/] appended to [cyan]'{key}'[/] queue."
                 )
-                return True
+                flag = 1
+    return flag

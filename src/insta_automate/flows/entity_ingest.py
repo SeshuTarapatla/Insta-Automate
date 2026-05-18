@@ -27,6 +27,16 @@ async def entity_ingest():
             text = str(msg.text)
             if (ENTITY_DIR / f"{text}.jpg").exists():
                 entity = append_entity(str(text))
+                match entity:
+                    case -1:
+                        entity = False
+                        log.error(f"No entity exists with id: @{text}")
+                    case 0:
+                        entity = False
+                        log.warning(f"Entity is already present in the queue: @{text}")
+                    case 1:
+                        entity = True
+                        log.info(f"Entity added to the queue: @{text}")
             else:
                 entity = add_new_entity(str(text), device)
         except ValidationError:
