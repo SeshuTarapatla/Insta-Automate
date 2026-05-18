@@ -32,7 +32,7 @@ def rm_empty_subdirs(dir: Path = IA_DIR, log: logging.Logger = get_logger(__name
         subdir
         for subdir in dir.rglob("*/*")
         if subdir.is_dir()
-        and not subdir.name.startswith(".")
+        and not [hidden for hidden in subdir.parts if hidden.startswith(".")]
         and not list(subdir.glob("*"))
     ]
     if empty_dirs:

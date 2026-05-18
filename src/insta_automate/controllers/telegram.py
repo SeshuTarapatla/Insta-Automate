@@ -155,9 +155,15 @@ class UserTelegramClient(BaseTelegramClient):
             ) from e
 
     async def iter_messages_only(
-        self, entity: EntityLike, offset: int = 0, search: str = cast(str, None)
+        self,
+        entity: EntityLike,
+        offset: int = 0,
+        search: str = cast(str, None),
+        from_user: EntityLike = cast(EntityLike, None),
     ):
-        async for msg in self.iter_messages(entity, add_offset=offset, search=search):
+        async for msg in self.iter_messages(
+            entity, add_offset=offset, search=search, from_user=from_user
+        ):
             if isinstance(msg, PatchedMessage):
                 yield msg
 
