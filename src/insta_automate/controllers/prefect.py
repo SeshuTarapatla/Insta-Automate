@@ -1,5 +1,5 @@
 import asyncio
-from datetime import date
+from datetime import date, datetime, timedelta
 from inspect import isawaitable
 from typing import Any, cast
 
@@ -54,7 +54,7 @@ class Deployment:
     ) -> FlowRun | None:
         if not self.switch():
             log.warning(f"Flow switch `{self._switch}` is OFF. Skipping trigger.")
-            return 
+            return
         attempt = 1
         while attempt <= retries:
             try:
@@ -165,7 +165,7 @@ class Prefect:
                 await self.entity_scan.trigger(parameters={"url": entities[0].url})
             await asyncio.sleep(10)
 
-    async def entity_scrape_trigger(self, wait: float = 600):
+    async def entity_scrape_trigger(self, wait: float = 600, buffer: float = 10):
         while True:
             scrape = Scrape.fetch(self.session)
             if scrape.limit_reached:
@@ -178,10 +178,13 @@ class Prefect:
                 log.info("Queued entities are requested to scrape.")
                 await self.entity_scrape.trigger()
                 await self.ping_telegram()
+                log.info(
+                    f"Next Scrape trigger at: {datetime.now() + timedelta(seconds=wait + buffer)}"
+                )
                 await asyncio.sleep(wait)
-            await asyncio.sleep(10)
+            await asyncio.sleep(buffer)
 
-    async def entity_follow_trigger(self, wait: float = 1200):
+    async def entity_follow_trigger(self, wait: float = 1200, buffer: float = 10):
         while True:
             follow = Follow.fetch(self.session)
             if follow.limit_reached:
@@ -194,8 +197,11 @@ class Prefect:
                 log.info("Queued entities found to follow.")
                 await self.entity_follow.trigger()
                 await self.ping_telegram()
+                log.info(
+                    f"Next Follow trigger at: {datetime.now() + timedelta(seconds=wait + buffer)}"
+                )
                 await asyncio.sleep(wait)
-            await asyncio.sleep(10)
+            await asyncio.sleep(buffer)
 
     async def serve(self):
         await self.tl.start()
