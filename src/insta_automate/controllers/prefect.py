@@ -178,7 +178,8 @@ class Prefect:
                 log.info("Queued entities are requested to scrape.")
                 await self.entity_scrape.trigger()
                 await self.ping_telegram()
-            await asyncio.sleep(wait)
+                await asyncio.sleep(wait)
+            await asyncio.sleep(10)
 
     async def entity_follow_trigger(self, wait: float = 1200):
         while True:
@@ -193,7 +194,8 @@ class Prefect:
                 log.info("Queued entities found to follow.")
                 await self.entity_follow.trigger()
                 await self.ping_telegram()
-            await asyncio.sleep(wait)
+                await asyncio.sleep(wait)
+            await asyncio.sleep(10)
 
     async def serve(self):
         await self.tl.start()
