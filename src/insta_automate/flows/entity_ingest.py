@@ -3,12 +3,12 @@
 from prefect import get_run_logger
 from pydantic import ValidationError
 
-from insta_automate.controllers.cli import append_entity
+from insta_automate.controllers.instagram import Insta
 from insta_automate.controllers.telegram import IaTelegram
 from insta_automate.flows import ia_flow
 from insta_automate.tasks.data import db_backup
 from insta_automate.tasks.device import device_ready
-from insta_automate.tasks.ia import add_new_entity
+from insta_automate.tasks.ia import add_new_entity, append_entity_to_queue
 from insta_automate.utils import rm_empty_subdirs
 from insta_automate.vars import ENTITY_DIR
 
@@ -23,24 +23,14 @@ async def entity_ingest():
     ENTITY_DIR.mkdir(exist_ok=True, parents=True)
 
     async for msg in tl.iter_entity_messages():
+        text = str(msg.text)
         try:
-            text = str(msg.text)
-            if (ENTITY_DIR / f"{text}.jpg").exists():
-                entity = append_entity(str(text))
-                match entity:
-                    case -1:
-                        entity = False
-                        log.error(f"No entity exists with id: @{text}")
-                    case 0:
-                        entity = False
-                        log.warning(f"Entity is already present in the queue: @{text}")
-                    case 1:
-                        entity = True
-                        log.info(f"Entity added to the queue: @{text}")
+            if text.startswith(Insta.URL):
+                entity = add_new_entity(text, device)
             else:
-                entity = add_new_entity(str(text), device)
+                append_entity_to_queue(text)
         except ValidationError:
-            log.error(f"Message(text='{msg.text}') is not a valid entity url.")
+            log.error(f"Message(text='{text}') is not a valid entity url.")
         await tl.delete_message(msg)
 
     if entity:

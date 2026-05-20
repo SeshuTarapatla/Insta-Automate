@@ -7,6 +7,7 @@ from PIL import Image
 from prefect import get_run_logger
 from sqlmodel import Session
 
+from insta_automate.controllers.cli import append_entity
 from insta_automate.controllers.device import IaDevice
 from insta_automate.controllers.postgres import IaSession
 from insta_automate.controllers.telegram import IaTelegram
@@ -26,6 +27,7 @@ from insta_automate.tasks import ia_task
 from insta_automate.tasks.device import network_access, switch_account_for_entity
 from insta_automate.vars import (
     ELEMENT_HEIGHT,
+    ENTITY_DIR,
     IA_DIR,
     SCANNED_DIR,
     SCRAPE_QUEUE_DIR,
@@ -97,6 +99,19 @@ def add_new_entity(url: str, device: IaDevice | None = None) -> Entity:
             log.info("Adding entry to Entity table.")
             entity.update(session)
     return entity
+
+
+@ia_task()
+def append_entity_to_queue(entity: str):
+    log = get_run_logger()
+    resp = append_entity(entity)
+    if resp:
+        log.info(f"Entity '{entity}' has been added to queue.")
+    else:
+        if (ENTITY_DIR / f"{entity}.jpg").exists():
+            log.warning(f"Entity '{entity}' already exists in the queue.")
+        else:
+            log.error(f"Entity '{entity}' is invalid / does not exist.")
 
 
 @ia_task()

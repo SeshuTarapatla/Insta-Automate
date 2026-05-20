@@ -1,23 +1,21 @@
 __all__ = ["ia"]
 
-from typing import Literal
 
 from async_typer import AsyncTyper
-from dotenv import get_key, set_key
 from my_modules.logger import get_logger
 from typer import Option
 
 from insta_automate.controllers.docker import IaDocker
 from insta_automate.controllers.postgres import IaPostgres
 from insta_automate.controllers.prefect import Prefect
+from insta_automate.controllers.queue import FOLLOW_QUEUE, SCRAPE_QUEUE
 from insta_automate.controllers.telegram import IaTelegram
 from insta_automate.flows import IaFlows
 from insta_automate.vars import (
     BANNER,
-    ENTITY_DIR,
     IA_DOCKER_IMAGE,
-    TRIGGERS,
 )
+
 
 log = get_logger(__name__)
 print(BANNER)
@@ -109,23 +107,7 @@ async def prefect_deploy():
 
 
 @ia.command(name="add", help="Append an entity to the preference queue.")
-def append_entity(entity: str) -> Literal[-1,0,1]:
-    if not (ENTITY_DIR / f"{entity}.jpg").exists():
-        log.error(f"Entity: [bold red]{entity}[/] does not exist.")
-        return -1
-    flag = 0
-    for key in ("SCRAPE_ENTITY", "FOLLOW_ENTITY"):
-        if values := get_key(TRIGGERS, key):
-            values = [value.strip() for value in values.split(",")]
-            if entity in values:
-                log.warning(
-                    f"Entity: [bold yellow]{entity}[/] already exists in [cyan]'{key}'[/] queue."
-                )
-            else:
-                values.append(entity)
-                set_key(TRIGGERS, key, ",".join(values))
-                log.info(
-                    f"Entity: [bold blue]{entity}[/] appended to [cyan]'{key}'[/] queue."
-                )
-                flag = 1
-    return flag
+def append_entity(entity: str):
+    scrape_addition = SCRAPE_QUEUE.add(entity)
+    follow_addition = FOLLOW_QUEUE.add(entity)
+    return scrape_addition or follow_addition
