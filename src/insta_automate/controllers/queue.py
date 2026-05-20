@@ -11,7 +11,7 @@ from insta_automate.vars import ENTITY_DIR, FOLLOW_QUEUE_DIR, SCRAPE_QUEUE_DIR, 
 log = get_logger(__name__)
 
 
-class Queue(list):
+class Queue(list[Path]):
     class Order(StrEnum):
         NAME = auto()
         DATE = auto()
@@ -41,10 +41,7 @@ class Queue(list):
             if self.key
             else []
         )
-        self.pref_queue = [
-            self.directory / entry
-            for entry in self.entries
-        ]
+        self.pref_queue = [self.directory / entry for entry in self.entries]
         rem_queue = [
             folder
             for folder in self.directory.glob("*")
@@ -100,7 +97,7 @@ class Queue(list):
             )
             return True
 
-    def remove(self, entity: str): 
+    def remove(self, entity: str):  # type: ignore
         if entity in self.entries:
             self.entries.remove(entity)
             self.update()
