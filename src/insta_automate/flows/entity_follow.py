@@ -8,7 +8,7 @@ from prefect import get_run_logger
 from insta_automate.controllers.cli import IaTelegram
 from insta_automate.controllers.instagram import Insta
 from insta_automate.controllers.prefect import IaSession
-from insta_automate.controllers.queue import FOLLOW_QUEUE
+from insta_automate.controllers.queue import FOLLOW_QUEUE, Queue
 from insta_automate.exceptions import InvalidEntity
 from insta_automate.flows import ia_flow
 from insta_automate.models.entity import Entity
@@ -47,12 +47,13 @@ async def entity_follow(entity: str | None = None, n: int = Limit.FOLLOW_BATCH):
         for entry in follow_queue:
             if (followed >= n) or follow.limit_reached:
                 break
-            log.info(f"Following from entity: {entry.name}")
+            log.info(f"Following from entity: @{entry.name}")
             while (followed < n) and (not follow.limit_reached):
                 image = choice(jpegs(entry, shuffle=True) or [None])
                 if not image:
-                    log.warning(f"No more entities found to follow in {entry.name}.")
-                    FOLLOW_QUEUE.remove(entry.name)
+                    log.warning(f"No more entities found to follow in @{entry.name}.")
+                    if not Queue.dir_exists(entry.name):
+                        FOLLOW_QUEUE.remove(entry.name)
                     break
                 processed += 1
                 log.info(f"{processed}. {followed + 1}/{n}: @{image}: Follow triggered")

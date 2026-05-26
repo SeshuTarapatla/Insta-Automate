@@ -5,7 +5,13 @@ from dotenv import get_key, set_key
 from my_modules.logger import get_logger
 
 from insta_automate.utils import jpegs
-from insta_automate.vars import ENTITY_DIR, FOLLOW_QUEUE_DIR, SCRAPE_QUEUE_DIR, TRIGGERS
+from insta_automate.vars import (
+    ENTITY_DIR,
+    FOLLOW_QUEUE_DIR,
+    IA_DIR,
+    SCRAPE_QUEUE_DIR,
+    TRIGGERS,
+)
 
 
 log = get_logger(__name__)
@@ -108,6 +114,10 @@ class Queue(list[Path]):
             log.error(
                 f"Entity [bold red]{entity}[/] does not exists in the [cyan]{self.key}[/] queue."
             )
+
+    @staticmethod
+    def dir_exists(entity: str) -> bool:
+        return any(subdir for subdir in IA_DIR.rglob(entity))
 
 
 FOLLOW_QUEUE = Queue(FOLLOW_QUEUE_DIR, "FOLLOW_QUEUE", Queue.Order.COUNT)
