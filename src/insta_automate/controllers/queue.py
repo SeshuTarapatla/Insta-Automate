@@ -26,8 +26,8 @@ class Queue(list[Path]):
     def __init__(
         self,
         directory: Path,
-        env_key: str | None = None,
-        order: Order = Order.NAME,
+        env_key: str = "ENTITY_QUEUE",
+        order: Order = Order.COUNT,
         inverse: bool = False,
     ) -> None:
         self.key = env_key
@@ -103,7 +103,16 @@ class Queue(list[Path]):
             )
             return True
 
-    def remove(self, entity: str):  # type: ignore
+    def remove(self, entity: str, check: bool = True):  # type: ignore
+        if check and any(
+            subdir
+            for subdir in IA_DIR.rglob(entity)
+            if subdir.is_dir() and jpegs(subdir)
+        ):
+            log.error(
+                f"Entity [bold yellow]{entity}[/] has jpegs and is not removed from the [cyan]{self.key}[/] queue."
+            )
+            return
         if entity in self.entries:
             self.entries.remove(entity)
             self.update()
@@ -115,10 +124,6 @@ class Queue(list[Path]):
                 f"Entity [bold red]{entity}[/] does not exists in the [cyan]{self.key}[/] queue."
             )
 
-    @staticmethod
-    def dir_exists(entity: str) -> bool:
-        return any(subdir for subdir in IA_DIR.rglob(entity))
 
-
-FOLLOW_QUEUE = Queue(FOLLOW_QUEUE_DIR, "FOLLOW_QUEUE", Queue.Order.COUNT)
-SCRAPE_QUEUE = Queue(SCRAPE_QUEUE_DIR, "SCRAPE_QUEUE", Queue.Order.COUNT)
+FOLLOW_QUEUE = Queue(FOLLOW_QUEUE_DIR)
+SCRAPE_QUEUE = Queue(SCRAPE_QUEUE_DIR)

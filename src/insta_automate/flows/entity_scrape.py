@@ -8,7 +8,7 @@ from prefect import get_run_logger
 from insta_automate.controllers.cli import IaTelegram
 from insta_automate.controllers.instagram import Insta
 from insta_automate.controllers.prefect import IaSession
-from insta_automate.controllers.queue import SCRAPE_QUEUE, Queue
+from insta_automate.controllers.queue import SCRAPE_QUEUE
 from insta_automate.exceptions import InvalidEntity
 from insta_automate.flows import ia_flow
 from insta_automate.models.entity import Entity
@@ -54,8 +54,7 @@ async def entity_scrape(entity: str | None = None, n: int = Limit.SCRAPE_BATCH):
                 image = choice(jpegs(entry, shuffle=True) or [None])
                 if not image:
                     log.warning(f"No more entities found to scrape in @{entry.name}.")
-                    if not Queue.dir_exists(entry.name):
-                        SCRAPE_QUEUE.remove(entry.name)
+                    SCRAPE_QUEUE.remove(entry.name)
                     break
                 processed += 1
                 log.info(f"{processed}. {scraped + 1}/{n}: {image}: Scrape triggered")
@@ -67,7 +66,7 @@ async def entity_scrape(entity: str | None = None, n: int = Limit.SCRAPE_BATCH):
                 image.unlink()
 
         device.lock()
-        log.info(f"Scrape complete. Processed: {processed}, Scraped: {scraped}") 
+        log.info(f"Scrape complete. Processed: {processed}, Scraped: {scraped}")
         await notify_new_entities_scraped() if scraped else None
         if scrape.limit_reached:
             tl = await IaTelegram.get_client()

@@ -213,3 +213,6 @@ __marimo__/
 Dockerfile
 dump.xml
 client
+
+# AI
+query.md
