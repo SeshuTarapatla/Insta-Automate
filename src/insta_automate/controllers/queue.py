@@ -13,7 +13,6 @@ from insta_automate.vars import (
     TRIGGERS,
 )
 
-
 log = get_logger(__name__)
 
 
@@ -102,8 +101,11 @@ class Queue(list[Path]):
                 f"Entity [bold blue]{entity}[/] is added to the [cyan]{self.key}[/] queue."
             )
             return True
+        return False
 
-    def remove(self, entity: str, check: bool = True):  # type: ignore
+    def remove(self, entity: str, check: bool = True) -> bool:  # type: ignore
+        if entity not in self.entries:
+            return False
         if check and any(
             subdir
             for subdir in IA_DIR.rglob(entity)
@@ -112,17 +114,13 @@ class Queue(list[Path]):
             log.error(
                 f"Entity [bold yellow]{entity}[/] has jpegs and is not removed from the [cyan]{self.key}[/] queue."
             )
-            return
-        if entity in self.entries:
-            self.entries.remove(entity)
-            self.update()
-            log.info(
-                f"Entity [bold blue]{entity}[/] has been removed from the [cyan]{self.key}[/] queue."
-            )
-        else:
-            log.error(
-                f"Entity [bold red]{entity}[/] does not exists in the [cyan]{self.key}[/] queue."
-            )
+            return False
+        self.entries.remove(entity)
+        self.update()
+        log.info(
+            f"Entity [bold blue]{entity}[/] has been removed from the [cyan]{self.key}[/] queue."
+        )
+        return True
 
 
 FOLLOW_QUEUE = Queue(FOLLOW_QUEUE_DIR)
