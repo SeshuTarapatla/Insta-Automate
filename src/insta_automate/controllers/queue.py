@@ -25,8 +25,8 @@ class Queue(list[Path]):
     def __init__(
         self,
         directory: Path,
+        order: Order = Order.DATE,
         env_key: str = "ENTITY_QUEUE",
-        order: Order = Order.COUNT,
         inverse: bool = False,
     ) -> None:
         self.key = env_key
