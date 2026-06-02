@@ -62,7 +62,12 @@ class Queue(list[Path]):
             case Queue.Order.DATE:
 
                 def date_key(folder: Path):
-                    return folder.lstat().st_birthtime
+                    jpg = ENTITY_DIR / f"{folder.name}.jpg"
+                    return (
+                        jpg.lstat().st_mtime
+                        if jpg.exists()
+                        else folder.lstat().st_mtime
+                    )
 
                 key = date_key
             case Queue.Order.COUNT:
