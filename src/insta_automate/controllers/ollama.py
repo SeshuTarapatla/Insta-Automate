@@ -32,6 +32,7 @@ class AiClassifier:
             images=[str(image)],
             options={"temperature": 0},
             format=response_model.model_json_schema(),
+            keep_alive=0,
         ).response
         return response_model.model_validate_json(response)
 
