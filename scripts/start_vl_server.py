@@ -81,7 +81,11 @@ def build_env(server: Path) -> dict[str, str]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", default=DEFAULT_MODEL)
-    parser.add_argument("--host", default="127.0.0.1")
+    # 127.0.0.1 is enough: the k3s (Rancher Desktop) worker pod reaches the host
+    # via host.docker.internal, which forwards to the Windows host's loopback
+    # (same path Ollama used on :11434). Override with --host 0.0.0.0 only if a
+    # client needs to reach it over the LAN.
+    parser.add_argument("--host", default=os.getenv("VL_SERVER_HOST", "127.0.0.1"))
     parser.add_argument("--port", type=int, default=int(os.getenv("VL_SERVER_PORT", "11500")))
     parser.add_argument(
         "--image-min-tokens",
