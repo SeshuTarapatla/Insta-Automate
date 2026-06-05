@@ -28,7 +28,7 @@ class DockerEnv(BaseModel):
     WINDOWS_HOST: str = get_wsl_host_ip()
     TZ: str = "Asia/Kolkata"
     IA_DIR: str = "/insta-automate"
-    OLLAMA_URL: str = "http://host.docker.internal:11434"
+    VL_SERVER_URL: str = "http://host.docker.internal:11500/v1"
 
     def model_dump_env(self) -> list[str]:
         return [f"ENV {key}='{value}'" for key, value in self.model_dump().items()]
