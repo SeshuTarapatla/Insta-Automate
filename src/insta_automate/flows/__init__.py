@@ -27,7 +27,7 @@ class FlowDeployConfig(TypedDict, total=False):
 
 
 _DEPLOY_DEFAULTS: FlowDeployConfig = FlowDeployConfig(
-    work_queue_name="default",
+    work_queue_name="standard",
     concurrency_limit=1,
 )
 
