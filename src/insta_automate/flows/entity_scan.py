@@ -4,11 +4,10 @@ from prefect import get_run_logger
 
 from insta_automate.controllers.device import IaDevice
 from insta_automate.controllers.postgres import IaSession
-from insta_automate.flows import ia_flow
+from insta_automate.flows import FlowDeployConfig, ia_flow
 from insta_automate.models.entity import Entity
-from insta_automate.models.meta import EntityAccess, EntityStatus, EntityType
+from insta_automate.models.meta import EntityAccess, EntityStatus, EntityType, ScanList
 from insta_automate.models.scan import Scan
-from insta_automate.models.meta import ScanList
 from insta_automate.tasks.data import db_backup
 from insta_automate.tasks.device import device_ready
 from insta_automate.tasks.ia import (
@@ -16,11 +15,18 @@ from insta_automate.tasks.ia import (
     post_entity_scan,
     profile_entity_scan,
 )
-from insta_automate.tasks.telegram import notify_scan_limit_reached, notify_profile_unfollow
+from insta_automate.tasks.telegram import (
+    notify_profile_unfollow,
+    notify_scan_limit_reached,
+)
+
+DEPLOY_CONFIG = FlowDeployConfig(work_queue_name="priority")
 
 
 @ia_flow()
-async def entity_scan(url: str, list: ScanList = ScanList.AUTO, device: IaDevice | None = None):
+async def entity_scan(
+    url: str, list: ScanList = ScanList.AUTO, device: IaDevice | None = None
+):
     log = get_run_logger()
     session = IaSession()
     status = None
@@ -38,7 +44,9 @@ async def entity_scan(url: str, list: ScanList = ScanList.AUTO, device: IaDevice
         return
     match entity.type:
         case EntityType.PROFILE:
-            status = await profile_entity_scan(entity, list=list, device=device, session=session)
+            status = await profile_entity_scan(
+                entity, list=list, device=device, session=session
+            )
             if status is True and entity.access == EntityAccess.PRIVATE:
                 await notify_profile_unfollow(entity)
         case EntityType.REEL | EntityType.POST:

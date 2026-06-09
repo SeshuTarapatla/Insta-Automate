@@ -19,10 +19,6 @@ IA_ALT_ACCOUNT: str = getenv("IA_ALT_ACCOUNT", "")
 IA_DIR: Path = Path(getenv("IA_DIR", ""))
 IA_MAIN_ACCOUNT: str = getenv("IA_MAIN_ACCOUNT", "")
 OLLAMA_URL: str | None = getenv("OLLAMA_URL")
-# Vision-language inference runs on a standalone llama-server (OpenAI API) instead
-# of Ollama: Ollama injects --image-min-tokens 1024 for qwen3-vl which forces every
-# image to ~1067 tokens and makes the CPU vision encode take 7-12s. See
-# scripts/start_vl_server.py and controllers/ollama.py.
 VL_SERVER_URL: str = getenv("VL_SERVER_URL", "http://127.0.0.1:11500/v1")
 VL_IMAGE_MIN_TOKENS: int = int(getenv("VL_IMAGE_MIN_TOKENS", "64"))
 WINDOWS_HOST: str = get_wsl_host_ip()

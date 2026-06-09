@@ -3,7 +3,7 @@ __all__ = ["ia_flow"]
 import asyncio
 from importlib import import_module
 from pkgutil import iter_modules
-from typing import cast
+from typing import TypedDict, cast
 
 from my_modules.datetime_utils import Timestamp
 from my_modules.helpers import handle_await
@@ -19,6 +19,17 @@ from insta_automate.vars import (
 )
 
 log = get_logger(__name__)
+
+
+class FlowDeployConfig(TypedDict, total=False):
+    work_queue_name: str
+    concurrency_limit: int | None
+
+
+_DEPLOY_DEFAULTS: FlowDeployConfig = FlowDeployConfig(
+    work_queue_name="default",
+    concurrency_limit=1,
+)
 
 
 def ia_flow(
@@ -48,8 +59,9 @@ class IaFlows:
             )
             deployment = flow_name.replace("_", "-")
             _flow = cast(Flow, await handle_await(flow.from_source(src, flow_path)))
+            cfg = {**_DEPLOY_DEFAULTS, **getattr(flow_, "DEPLOY_CONFIG", {})}
             log.info(
-                f"Deploying: Deployment(flow='{flow_name}', description='{flow_desc}')"
+                f"Deploying: Deployment(flow='{flow_name}', queue='{cfg['work_queue_name']}', description='{flow_desc}')"
             )
             while True:
                 try:
@@ -59,7 +71,7 @@ class IaFlows:
                             work_pool_name=IA_PREFECT_WORKPOOL,
                             ignore_warnings=True,
                             description=flow_desc,
-                            concurrency_limit=1,
+                            **cfg,
                         )
                     )
                     break
