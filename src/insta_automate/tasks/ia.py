@@ -129,9 +129,11 @@ async def profile_entity_scan(
     device = device or IaDevice()
     session = session or IaSession()
     ui = device.ui
+
+    device.unlock()
     scanned_dir = SCANNED_DIR / entity.id
 
-    if ui.action_bar_title.get_text() == entity.id and ui.follower_container.exists():
+    if ui.follower_container.exists() and ui.action_bar_title.get_text() == entity.id:
         count = session.exec(
             select(func.count()).select_from(Scanned).where(Scanned.root == entity.id)
         ).one()
