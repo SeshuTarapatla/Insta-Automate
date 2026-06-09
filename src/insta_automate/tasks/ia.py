@@ -5,7 +5,8 @@ from my_modules.datetime_utils import Timestamp
 from my_modules.inet import Internet
 from PIL import Image
 from prefect import get_run_logger
-from sqlmodel import Session
+from sqlalchemy import func
+from sqlmodel import Session, select
 
 from insta_automate.controllers.cli import append_entity
 from insta_automate.controllers.device import IaDevice
@@ -128,45 +129,52 @@ async def profile_entity_scan(
     device = device or IaDevice()
     session = session or IaSession()
     ui = device.ui
-
-    # match entity type with scan type
-    if entity.type != EntityType.PROFILE:
-        msg = f"Profile entity scan is called with entity of type: {entity.type.upper()}.\n{entity.model_dump_json(indent=4)}"
-        log.error(msg)
-        raise InvalidEntity(msg)
-
-    # fetch latest access status of the entity
-    if not scan_entity_init(entity, device, session):
-        return False
-
-    # update entity status and log metadata
-    log.info(f"Setting entity status to {EntityStatus.SCANNING.upper()}")
-    entity.update(session, status=EntityStatus.SCANNING)
-    profile = User.from_ui(device.ui)
-    profile.access = entity.access
-    log.info(f"Root:\n{profile.model_dump_json(indent=4)}")
-    session.merge(profile)
-    session.commit()
-
-    # pick which list to scan
-    if list == ScanList.FOLLOWERS:
-        _list, list_element = "followers", ui.profile_followers
-    elif list == ScanList.FOLLOWING:
-        _list, list_element = "following", ui.profile_following
-    else:
-        if profile.f1 < profile.f2:
-            _list, list_element = "followers", ui.profile_followers
-        else:
-            _list, list_element = "following", ui.profile_following
-    log.info(f"Opening profile {_list} list.")
-    list_element.click()
-    ui.follower_container.must_wait()
-
-    # variable initialization
     scanned_dir = SCANNED_DIR / entity.id
-    scanned_dir.mkdir(exist_ok=True, parents=True)
+
+    if ui.action_bar_title.get_text() == entity.id and ui.follower_container.exists():
+        count = session.exec(
+            select(func.count()).select_from(Scanned).where(Scanned.root == entity.id)
+        ).one()
+        scanned, added = count, count
+    else:
+        # match entity type with scan type
+        if entity.type != EntityType.PROFILE:
+            msg = f"Profile entity scan is called with entity of type: {entity.type.upper()}.\n{entity.model_dump_json(indent=4)}"
+            log.error(msg)
+            raise InvalidEntity(msg)
+
+        # fetch latest access status of the entity
+        if not scan_entity_init(entity, device, session):
+            return False
+
+        # update entity status and log metadata
+        log.info(f"Setting entity status to {EntityStatus.SCANNING.upper()}")
+        entity.update(session, status=EntityStatus.SCANNING)
+        profile = User.from_ui(device.ui)
+        profile.access = entity.access
+        log.info(f"Root:\n{profile.model_dump_json(indent=4)}")
+        session.merge(profile)
+        session.commit()
+
+        # pick which list to scan
+        if list == ScanList.FOLLOWERS:
+            _list, list_element = "followers", ui.profile_followers
+        elif list == ScanList.FOLLOWING:
+            _list, list_element = "following", ui.profile_following
+        else:
+            if profile.f1 < profile.f2:
+                _list, list_element = "followers", ui.profile_followers
+            else:
+                _list, list_element = "following", ui.profile_following
+        log.info(f"Opening profile {_list} list.")
+        list_element.click()
+        ui.follower_container.must_wait()
+
+        # variable initialization
+        scanned_dir.mkdir(exist_ok=True, parents=True)
+        scanned, added = 0, 0
+
     current, last = "undef", "undef1"
-    scanned, added = 0, 0
     scanned_set = set()
 
     # start scanning
