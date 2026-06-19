@@ -21,6 +21,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 DEFAULT_MODEL = os.getenv("OLLAMA_VL_MODEL", "qwen3-vl:4b-instruct")
@@ -93,6 +94,18 @@ def main() -> None:
         default=int(os.getenv("VL_IMAGE_MIN_TOKENS", "64")),
     )
     parser.add_argument("--ctx", type=int, default=int(os.getenv("VL_CTX", "4096")))
+    parser.add_argument(
+        "--no-autorestart",
+        action="store_true",
+        help="exit on first crash instead of restarting",
+    )
+    parser.add_argument(
+        "--max-restarts",
+        type=int,
+        default=0,
+        metavar="N",
+        help="stop after N restarts (0 = unlimited)",
+    )
     args = parser.parse_args()
 
     root = ollama_root()
@@ -124,7 +137,49 @@ def main() -> None:
         f"(image-min-tokens={args.image_min_tokens}, blob={gguf.name[:19]})",
         flush=True,
     )
-    sys.exit(subprocess.run(cmd, env=build_env(server)).returncode)
+
+    # Windows STATUS_CONTROL_C_EXIT — treat as user-initiated stop, not a crash
+    CTRL_C_EXIT = -1073741510
+
+    env = build_env(server)
+    restarts = 0
+    backoff = 5
+
+    while True:
+        start = time.monotonic()
+        try:
+            rc = subprocess.run(cmd, env=env).returncode
+        except KeyboardInterrupt:
+            print("\nStopped.", flush=True)
+            sys.exit(0)
+
+        if rc == 0 or rc == CTRL_C_EXIT:
+            sys.exit(0)
+
+        if args.no_autorestart:
+            sys.exit(rc)
+
+        restarts += 1
+        if args.max_restarts and restarts > args.max_restarts:
+            print(f"Max restarts ({args.max_restarts}) reached. Exiting.", flush=True)
+            sys.exit(rc)
+
+        # Reset backoff if the server ran long enough (not an instant crash loop)
+        if time.monotonic() - start > 60:
+            backoff = 5
+
+        print(
+            f"[{time.strftime('%H:%M:%S')}] Server crashed (exit {rc})."
+            f" Restart #{restarts} in {backoff}s...",
+            flush=True,
+        )
+        try:
+            time.sleep(backoff)
+        except KeyboardInterrupt:
+            print("\nStopped.", flush=True)
+            sys.exit(0)
+
+        backoff = min(backoff * 2, 60)
 
 
 if __name__ == "__main__":
