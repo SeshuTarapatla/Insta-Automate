@@ -259,8 +259,12 @@ async def post_entity_scan(
     # open likes list to scan
     if entity.type == EntityType.REEL:
         likes_element = ui.reel_like_count
-    else:
+    elif ui.post_comment_button.exists:
         likes_element = ui.post_like_count
+    elif (liked_by := ui.text_contains("Liked by")).exists:
+        likes_element = liked_by
+    else:
+        raise Exception("Failed to open likes.")
     likes_element.click(offset=(0, 0.5))
     ui.likes_drag_bar.drag_to(0, 0)
 
