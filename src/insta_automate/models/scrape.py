@@ -37,4 +37,4 @@ class Scrape(SQLModel, table=True):
 
     @property
     def limit_reached(self) -> bool:
-        return self.scraped >= Limit.SCRAPE
+        return self.scraped >= Limit.get("SCRAPE")

@@ -25,10 +25,10 @@ from insta_automate.models.scrape import Scrape
 from insta_automate.tasks.device import wait_for_device
 from insta_automate.utils import jpegs
 from insta_automate.vars import (
+    CONFIG,
     FOLLOW_QUEUE_DIR,
     SCANNED_DIR,
     SCRAPED_DIR,
-    TRIGGERS,
 )
 
 log = get_logger(__name__)
@@ -47,7 +47,7 @@ class Deployment:
         return self.__repr__()
 
     def switch(self) -> bool:
-        return get_key(TRIGGERS, self._switch) != "0"
+        return get_key(CONFIG, self._switch) != "0"
 
     async def trigger(
         self, wait: bool = True, parameters: dict[str, Any] = {}, retries: int = 3
@@ -173,7 +173,7 @@ class Prefect:
                     "Scrape limit reached for the day. Pausing trigger until next day."
                 )
                 await self.wait_day_change(Timestamp().date())
-            if len(jpegs(SCRAPED_DIR) + jpegs(FOLLOW_QUEUE_DIR)) < Limit.FOLLOW * 3:
+            if len(jpegs(SCRAPED_DIR) + jpegs(FOLLOW_QUEUE_DIR)) < Limit.get("FOLLOW") * 3:
                 await wait_for_device(self.tl)
                 log.info("Queued entities are requested to scrape.")
                 await self.entity_scrape.trigger()

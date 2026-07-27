@@ -25,8 +25,9 @@ from insta_automate.vars import SCRAPE_QUEUE_DIR, SCRAPED_DIR
 
 
 @ia_flow()
-async def entity_scrape(entity: str | None = None, n: int = Limit.SCRAPE_BATCH):
+async def entity_scrape(entity: str | None = None, n: int | None = None):
     log = get_run_logger()
+    n = n if n is not None else Limit.get("SCRAPE_BATCH")
     scraped, processed, scrape_queue = 0, 0, SCRAPE_QUEUE.copy()
     if entity:
         _entity = Entity.from_url(

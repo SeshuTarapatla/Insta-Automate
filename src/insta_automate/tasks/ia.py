@@ -358,11 +358,11 @@ async def profile_scrape(
     elif user.p == 0:
         log.error(f"@{id} has zero posts. Skipping scrape.")
         return False
-    elif (_min := min(user.f1, user.f2)) < Limit.FMIN:
-        log.error(f"@{id} has {_min} < {Limit.FMIN} followers. Skipping scrape.")
+    elif (_min := min(user.f1, user.f2)) < Limit.get("FMIN"):
+        log.error(f"@{id} has {_min} < {Limit.get('FMIN')} followers. Skipping scrape.")
         return False
-    elif user.f1 > Limit.FMAX:
-        log.error(f"@{id} has {user.f1} > {Limit.FMAX} followers. Skipping scrape.")
+    elif user.f1 > Limit.get("FMAX"):
+        log.error(f"@{id} has {user.f1} > {Limit.get('FMAX')} followers. Skipping scrape.")
         return False
 
     profile_page = ui.profile_page.screenshot()

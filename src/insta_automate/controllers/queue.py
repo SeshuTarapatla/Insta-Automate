@@ -6,11 +6,11 @@ from my_modules.logger import get_logger
 
 from insta_automate.utils import jpegs
 from insta_automate.vars import (
+    CONFIG,
     ENTITY_DIR,
     FOLLOW_QUEUE_DIR,
     IA_DIR,
     SCRAPE_QUEUE_DIR,
-    TRIGGERS,
 )
 
 log = get_logger(__name__)
@@ -40,7 +40,7 @@ class Queue(list[Path]):
         self.entries = (
             [
                 entry.strip()
-                for entry in (get_key(TRIGGERS, self.key) or "").split(",")
+                for entry in (get_key(CONFIG, self.key) or "").split(",")
                 if entry
             ]
             if self.key
@@ -87,7 +87,7 @@ class Queue(list[Path]):
 
     def update(self):
         if self.key:
-            set_key(TRIGGERS, self.key, ",".join(self.entries))
+            set_key(CONFIG, self.key, ",".join(self.entries))
         self.load_queue()
 
     def add(self, entity: str):

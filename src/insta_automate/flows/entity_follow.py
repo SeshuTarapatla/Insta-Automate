@@ -24,8 +24,9 @@ from insta_automate.vars import FOLLOW_QUEUE_DIR
 
 
 @ia_flow()
-async def entity_follow(entity: str | None = None, n: int = Limit.FOLLOW_BATCH):
+async def entity_follow(entity: str | None = None, n: int | None = None):
     log = get_run_logger()
+    n = n if n is not None else Limit.get("FOLLOW_BATCH")
     followed, processed, follow_queue = 0, 0, FOLLOW_QUEUE.copy()
     if entity:
         _entity = Entity.from_url(
@@ -63,7 +64,7 @@ async def entity_follow(entity: str | None = None, n: int = Limit.FOLLOW_BATCH):
 
         device.lock()
         log.info(
-            f"Follow flow complete. Total followed on {Timestamp().date()}: {follow.followed}/{Limit.FOLLOW}"
+            f"Follow flow complete. Total followed on {Timestamp().date()}: {follow.followed}/{Limit.get('FOLLOW')}"
         )
         if follow.limit_reached:
             log.warning("Follow limit has reached for the day.")

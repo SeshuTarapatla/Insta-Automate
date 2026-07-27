@@ -33,4 +33,4 @@ class Follow(SQLModel, table=True):
 
     @property
     def limit_reached(self) -> bool:
-        return self.followed >= Limit.FOLLOW
+        return self.followed >= Limit.get("FOLLOW")
