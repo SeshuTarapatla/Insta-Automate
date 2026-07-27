@@ -26,7 +26,7 @@ async def entity_ingest():
         text = str(msg.text)
         try:
             if text.startswith(Insta.URL):
-                entity = add_new_entity(text, device)
+                entity = await add_new_entity(text, device, tl)
             else:
                 append_entity_to_queue(text)
         except ValidationError:

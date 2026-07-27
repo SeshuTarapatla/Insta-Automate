@@ -1,5 +1,6 @@
 import asyncio
 from pathlib import Path
+from typing import cast
 
 from my_modules.datetime_utils import Timestamp
 from my_modules.inet import Internet
@@ -7,6 +8,7 @@ from PIL import Image
 from prefect import get_run_logger
 from sqlalchemy import func
 from sqlmodel import Session, select
+from telethon.hints import FileLike
 
 from insta_automate.controllers.cli import append_entity
 from insta_automate.controllers.device import IaDevice
@@ -83,14 +85,22 @@ def scan_entity_init(
 
 
 @ia_task()
-def add_new_entity(url: str, device: IaDevice | None = None) -> Entity:
+async def add_new_entity(
+    url: str, device: IaDevice | None = None, tl: IaTelegram | None = None
+) -> Entity:
     log = get_run_logger()
     device = device or IaDevice()
+    tl = tl or await IaTelegram.get_client()
     log.info(f"Input entity url: {url}")
     entity = Entity.from_url(url)
     with IaSession() as session:
         if (_entity := entity.fetch(session)) is not None:
             log.warning(f"Entity already exists: {_entity.model_dump_json(indent=4)}")
+            img = ENTITY_DIR / f"{_entity.id}.jpg"
+            await tl.bot.notify(
+                message=f"[@{_entity.id}]({url}) has been already {'scraped' if _entity.status == EntityStatus.COMPLETED else 'added'}.",
+                file=img if img.exists() else cast(FileLike, None),
+            )
         else:
             log.info(f"Entity type is determined to be: {entity.type.upper()}")
             log.info("Determing entity access type...")
@@ -362,7 +372,9 @@ async def profile_scrape(
         log.error(f"@{id} has {_min} < {Limit.get('FMIN')} followers. Skipping scrape.")
         return False
     elif user.f1 > Limit.get("FMAX"):
-        log.error(f"@{id} has {user.f1} > {Limit.get('FMAX')} followers. Skipping scrape.")
+        log.error(
+            f"@{id} has {user.f1} > {Limit.get('FMAX')} followers. Skipping scrape."
+        )
         return False
 
     profile_page = ui.profile_page.screenshot()
