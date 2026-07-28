@@ -365,7 +365,7 @@ async def profile_scrape(
             f"@{id} access is found out to be: {EntityAccess.PUBLIC.upper()}. Skipping scrape."
         )
         return False
-    elif user.p == 0:
+    elif user.p == 0 and (year := device.determine_year_joined()) is not None and year < 5:
         log.error(f"@{id} has zero posts. Skipping scrape.")
         return False
     elif (_min := min(user.f1, user.f2)) < Limit.get("FMIN"):

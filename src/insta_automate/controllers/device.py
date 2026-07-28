@@ -70,12 +70,27 @@ class IaDevice(Device):
 
     @retry(tries=3, delay=5)
     def __call__(
-        self, resourceId: str | None = None, text: str | None = None, **kwargs
+        self,
+        resourceId: str | None = None,
+        text: str | None = None,
+        textContains: str | None = None,
+        textMatches: str | None = None,
+        description: str | None = None,
+        descriptionContains: str | None = None,
+        descriptionMatches: str | None = None,
+        className: str | None = None,
+        **kwargs,
     ) -> UiObject:
         if resourceId and not resourceId.startswith("com"):
             resourceId = self.ui._resourceId(resourceId)
         kwargs["resourceId"] = resourceId
         kwargs["text"] = text
+        kwargs["textContains"] = textContains
+        kwargs["textMatches"] = textMatches
+        kwargs["description"] = description
+        kwargs["descriptionContains"] = descriptionContains
+        kwargs["descriptionMatches"] = descriptionMatches
+        kwargs["className"] = className
         kwargs = {key: value for key, value in kwargs.items() if value}
         return super().__call__(**kwargs)
 
@@ -212,6 +227,21 @@ class IaDevice(Device):
             self.ui.back_button.click()
             self.sleep(0.5)
 
+    def determine_year_joined(self) -> int | None:
+        try:
+            self.ui.profile_options.click()
+            self.ui.profile_about.wait(timeout=3)
+            self.ui.profile_about.click()
+            self.inet.wait_for_network()
+            self.ui.date_joined.wait(timeout=10)
+            joined_desc: str = self.ui.date_joined.info.get("contentDescription")
+            year_joined = int("".join([letter for letter in joined_desc if letter.isdigit()]))
+            current_year = Timestamp().year
+            self.press("back")
+            return current_year - year_joined
+        except Exception:
+            return None
+
     def determine_entity_access(
         self, entity: Entity, timeout: float = 30
     ) -> EntityAccess:
@@ -296,6 +326,7 @@ class IaUI:
         self.action_bar_title = self.resourceId("action_bar_title")
         self.alt_account = self.text(IA_ALT_ACCOUNT)
         self.back_button = self.content("Back")
+        self.date_joined = self.description_contains("Date joined")
         self.followed_by = self.text_contains("Followed by")
         self.follower_container = self.resourceId("follow_list_container")
         self.follower_container_id = self.resourceId("follow_list_username")
@@ -311,6 +342,7 @@ class IaUI:
         self.post_save_button = self.resourceId("row_feed_button_save")
         self.private_account_banner = self.text("This account is private")
         self.private_profile_banner = self.text("This profile is private")
+        self.profile_about = self.text("About this account")
         self.profile_avatar = self.resourceId(
             "profile_header_avatar_container_top_left_stub"
         )
@@ -331,6 +363,7 @@ class IaUI:
         self.profile_header = self.resourceId("profile_header_container")
         self.profile_id = self.action_bar_title
         self.profile_name = self.resourceId("profile_header_full_name_above_vanity")
+        self.profile_options = self.device(className="android.widget.ImageView", descriptionMatches="Options")
         self.profile_page = self.resourceId("layout_container_main")
         self.profile_posts = self.resourceId("profile_header_familiar_post_count_value")
         self.profile_tab = self.resourceId("profile_tab")
@@ -379,6 +412,12 @@ class IaUI:
 
     def text_contains(self, text: str) -> UiObject:
         return self.device(textContains=text)
+
+    def description_contains(self, text: str) -> UiObject:
+        return self.device(descriptionContains=text)
+
+    def description_matches(self, text: str) -> UiObject:
+        return self.device(descriptionMatches=text)
 
     @staticmethod
     def height(ui_object: UiObject, timeout: int = 0) -> int:
