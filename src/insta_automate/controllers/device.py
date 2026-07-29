@@ -238,6 +238,7 @@ class IaDevice(Device):
             year_joined = int("".join([letter for letter in joined_desc if letter.isdigit()]))
             current_year = Timestamp().year
             self.press("back")
+            self.ui.profile_following.wait()
             return current_year - year_joined
         except Exception:
             return None
