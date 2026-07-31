@@ -181,27 +181,44 @@ class Prefect:
     async def wait_until(self, flow: str, key: str) -> str:
         """Sleep in Config.get("TICK") increments, re-reading Config.get(key)
         every tick so an edited delay re-targets the deadline live. Returns
-        the wake reason - "elapsed", or one of "skip_wait"/"run_now"/
+        the wake reason - "elapsed", one of "skip_wait"/"run_now"/
         "reload_config" if that command arrived while waiting (ARCHITECTURE
-        §4.4) - all three just mean "re-evaluate now instead of at the
-        deadline", so they share one interrupt.
+        §4.4, all three just mean "re-evaluate now instead of at the
+        deadline"), or "force_run" if one is pending - peeked, not consumed,
+        so the trigger loop's own `_consume` still sees it and actually
+        bypasses the gate; this call just needs to stop sleeping through it.
+
+        `next_trigger_at` is only recomputed when `key`'s value actually
+        changes, not every tick - recomputing it from `datetime.now()` each
+        tick still lands on (very nearly) the same instant, but not exactly,
+        and the UI was reading each of those microsecond-different instants
+        as a fresh deadline, resetting its countdown ring to full every TICK.
+        Holding the same `deadline` object across unchanged ticks broadcasts
+        the identical value until something real changes it.
 
         Only touches `phase`/`next_trigger_at` in flow_state, never `gate` -
         the caller sets the gate once, right before calling this, and it
         should keep reading true for the whole wait rather than being
         clobbered by "ok" on the first tick."""
-        if target := Config.get(key):
+        target = Config.get(key)
+        if target:
             log.info(f"{flow}: waiting {target}s ({key}) before next trigger.")
         elapsed = 0.0
-        while elapsed < (target := Config.get(key)):
+        deadline = datetime.now() + timedelta(seconds=target)
+        while elapsed < target:
             tick = min(Config.get("TICK"), target - elapsed)
-            deadline = datetime.now() + timedelta(seconds=target - elapsed)
             self._set_state(flow, phase="waiting", next_trigger_at=deadline.isoformat())
             await asyncio.sleep(tick)
             elapsed += tick
             for wake in ("skip_wait", "run_now", "reload_config"):
                 if self._consume(flow, wake):
                     return wake
+            if self._pending(flow, "force_run"):
+                return "force_run"
+            new_target = Config.get(key)
+            if new_target != target:
+                deadline = datetime.now() + timedelta(seconds=max(new_target - elapsed, 0.0))
+                target = new_target
         return "elapsed"
 
     async def entity_ingest_trigger(self, force: bool = False):
