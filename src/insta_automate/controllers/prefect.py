@@ -1,5 +1,5 @@
 import asyncio
-from datetime import date
+from datetime import date, datetime, timedelta
 from inspect import isawaitable
 from typing import Any, cast
 
@@ -14,6 +14,7 @@ from prefect.deployments import run_deployment
 from prefect.flow_runs import wait_for_flow_run
 from telethon.events import NewMessage
 
+from insta_automate.controllers.agent import AgentClient
 from insta_automate.controllers.device import IaDevice
 from insta_automate.controllers.postgres import IaSession
 from insta_automate.controllers.telegram import IaTelegram
@@ -32,6 +33,10 @@ from insta_automate.vars import (
 )
 
 log = get_logger(__name__)
+
+
+def _gate(ok: bool, reason: str | None = None, detail: str | None = None) -> dict[str, Any]:
+    return {"ok": ok, "reason": reason, "detail": detail}
 
 
 class Deployment:
@@ -97,6 +102,7 @@ class Prefect:
         self.tl = IaTelegram()
         self.session = IaSession()
         self.inet = Internet()
+        self.agent = AgentClient()
 
         self.device: IaDevice = cast(IaDevice, None)
 
@@ -107,6 +113,16 @@ class Prefect:
         self.entity_follow = Deployment("entity-follow")
         self.entity_ingest_queued: bool = False
 
+        # Fed by the trigger loops, drained by heartbeat_loop() into the agent
+        # every ~2s (ARCHITECTURE §4.3). Keyed by flow name; each loop only
+        # ever sets its own key, so no lock is needed across a single event
+        # loop the way ManagedService needs one across threads.
+        self.flow_state: dict[str, dict[str, Any]] = {}
+
+    def _set_state(self, flow: str, **fields: Any) -> None:
+        state = self.flow_state.setdefault(flow, {"flow": flow})
+        state.update(fields)
+
     async def ping_telegram(self):
         log.info("Pinging telegram to keep session alive.")
         await self.tl.start()
@@ -116,7 +132,15 @@ class Prefect:
             await self.wait_until("telegram-keepalive", "TG_KEEPALIVE_WAIT")
             await self.ping_telegram()
 
-    async def wait_day_change(self, date: date):
+    async def wait_day_change(self, date: date, flow: str | None = None):
+        if flow:
+            next_midnight = datetime.combine(date + timedelta(days=1), datetime.min.time())
+            self._set_state(
+                flow,
+                phase="day_paused",
+                next_trigger_at=next_midnight.isoformat(),
+                gate=_gate(False, "day_limit", f"{flow} limit reached for {date}"),
+            )
         while date == Timestamp().date():
             await asyncio.sleep(Config.get("DAY_CHANGE_POLL"))
 
@@ -124,12 +148,19 @@ class Prefect:
         """Sleep in Config.get("TICK") increments, re-reading Config.get(key)
         every tick so an edited delay re-targets the deadline live. Returns
         the wake reason - "elapsed" is the only one until CP 3.3/3.4 wire a
-        command queue through the agent."""
+        command queue through the agent.
+
+        Only touches `phase`/`next_trigger_at` in flow_state, never `gate` -
+        the caller sets the gate once, right before calling this, and it
+        should keep reading true for the whole wait rather than being
+        clobbered by "ok" on the first tick."""
         if target := Config.get(key):
             log.info(f"{flow}: waiting {target}s ({key}) before next trigger.")
         elapsed = 0.0
         while elapsed < (target := Config.get(key)):
             tick = min(Config.get("TICK"), target - elapsed)
+            deadline = datetime.now() + timedelta(seconds=target - elapsed)
+            self._set_state(flow, phase="waiting", next_trigger_at=deadline.isoformat())
             await asyncio.sleep(tick)
             elapsed += tick
         return "elapsed"
@@ -150,15 +181,25 @@ class Prefect:
     async def entity_ingest_time_trigger(self):
         while True:
             if await self.tl.entities_exist:
+                self._set_state("entity-ingest", phase="triggering", gate=_gate(True))
                 await self.entity_ingest_trigger()
+            else:
+                self._set_state(
+                    "entity-ingest", gate=_gate(False, "no_work", "no new entities in the channel")
+                )
             await self.wait_until("entity-ingest", "INGEST_POLL_WAIT")
 
     async def entity_classify_trigger(self):
         while True:
             if jpegs(SCANNED_DIR):
                 log.info("Scanned entities found to classify.")
+                self._set_state("entity-classify", phase="triggering", gate=_gate(True))
                 await self.entity_classify.trigger()
                 await self.ping_telegram()
+            else:
+                self._set_state(
+                    "entity-classify", gate=_gate(False, "no_work", "nothing in scanned/ to classify")
+                )
             await self.wait_until("entity-classify", "CLASSIFY_POLL_WAIT")
 
     async def entity_scan_trigger(self):
@@ -168,9 +209,10 @@ class Prefect:
                 log.info(
                     "Scan limit reached for the day. Pausing trigger until next day."
                 )
-                await self.wait_day_change(Timestamp().date())
+                await self.wait_day_change(Timestamp().date(), flow="entity-scan")
                 continue
             if entities := Entity.fetch_queued_entities(self.session):
+                self._set_state("entity-scan", phase="triggering", gate=_gate(True))
                 self.inet.wait_for_network()
                 await wait_for_device(self.tl)
                 log.info(f"Total entities queued for scan: {len(entities)}")
@@ -179,6 +221,10 @@ class Prefect:
                 )
                 await self.entity_scan.trigger(parameters={"url": entities[0].url})
                 await self.wait_until("entity-scan", "SCAN_WAIT")
+            else:
+                self._set_state(
+                    "entity-scan", gate=_gate(False, "no_work", "no queued entities")
+                )
             await self.wait_until("entity-scan", "SCAN_POLL_WAIT")
 
     async def entity_scrape_trigger(self):
@@ -188,15 +234,27 @@ class Prefect:
                 log.info(
                     "Scrape limit reached for the day. Pausing trigger until next day."
                 )
-                await self.wait_day_change(Timestamp().date())
+                await self.wait_day_change(Timestamp().date(), flow="entity-scrape")
                 continue
             backpressure = Config.get("FOLLOW") * Config.get("SCRAPE_BACKPRESSURE_FACTOR")
-            if len(jpegs(SCRAPED_DIR) + jpegs(FOLLOW_QUEUE_DIR)) < backpressure:
+            count = len(jpegs(SCRAPED_DIR) + jpegs(FOLLOW_QUEUE_DIR))
+            if count < backpressure:
+                self._set_state("entity-scrape", phase="triggering", gate=_gate(True))
                 await wait_for_device(self.tl)
                 log.info("Queued entities are requested to scrape.")
                 await self.entity_scrape.trigger()
                 await self.ping_telegram()
                 await self.wait_until("entity-scrape", "SCRAPE_WAIT")
+            else:
+                self._set_state(
+                    "entity-scrape",
+                    gate=_gate(
+                        False,
+                        "backpressure",
+                        f"scraped+follow_queued = {count} ≥ FOLLOW×"
+                        f"{Config.get('SCRAPE_BACKPRESSURE_FACTOR')} = {backpressure}",
+                    ),
+                )
             await self.wait_until("entity-scrape", "SCRAPE_BUFFER")
 
     async def entity_follow_trigger(self):
@@ -206,15 +264,83 @@ class Prefect:
                 log.info(
                     "Follow limit reached for the day. Pausing trigger until next day."
                 )
-                await self.wait_day_change(Timestamp().date())
+                await self.wait_day_change(Timestamp().date(), flow="entity-follow")
                 continue
             if jpegs(FOLLOW_QUEUE_DIR):
+                self._set_state("entity-follow", phase="triggering", gate=_gate(True))
                 await wait_for_device(self.tl)
                 log.info("Queued entities found to follow.")
                 await self.entity_follow.trigger()
                 await self.ping_telegram()
                 await self.wait_until("entity-follow", "FOLLOW_WAIT")
+            else:
+                self._set_state(
+                    "entity-follow", gate=_gate(False, "no_work", "nothing in follow_queued/")
+                )
             await self.wait_until("entity-follow", "FOLLOW_BUFFER")
+
+    # ------------------------------------------------------------- heartbeat
+
+    def _today(self, flow: str) -> dict[str, int] | None:
+        match flow:
+            case "entity-scan":
+                scan = Scan.fetch(self.session)
+                return {
+                    "profiles": scan.profiles, "profiles_limit": Config.get("PROFILES"),
+                    "reels": scan.reels, "reels_limit": Config.get("REELS"),
+                    "posts": scan.posts, "posts_limit": Config.get("POSTS"),
+                }
+            case "entity-scrape":
+                scrape = Scrape.fetch(self.session)
+                return {"scraped": scrape.scraped, "limit": Config.get("SCRAPE")}
+            case "entity-follow":
+                follow = Follow.fetch(self.session)
+                return {"followed": follow.followed, "limit": Config.get("FOLLOW")}
+            case _:
+                # entity-ingest and entity-classify have no daily cap.
+                return None
+
+    def _last_run(self, deployment: Deployment) -> dict[str, Any] | None:
+        flow_run = getattr(deployment, "flow_run", None)
+        if flow_run is None:
+            return None
+        state = getattr(flow_run, "state", None)
+        state_type = getattr(state, "type", None)
+        duration = getattr(flow_run, "total_run_time", None)
+        return {
+            "id": str(flow_run.id),
+            "state": state_type.value if state_type else "UNKNOWN",
+            "duration_s": duration.total_seconds() if hasattr(duration, "total_seconds") else None,
+        }
+
+    async def heartbeat_loop(self, wait: float = 2.0):
+        """Every flow's state block (ARCHITECTURE §4.3), posted to the agent
+        so /api/scheduler has something real to mirror (CP 3.4, D27). Nothing
+        drains the returned commands yet - wait_until (D25) has no hook for
+        them to interrupt, so they are only logged for now."""
+        deployments = {
+            "entity-ingest": self.entity_ingest,
+            "entity-scan": self.entity_scan,
+            "entity-classify": self.entity_classify,
+            "entity-scrape": self.entity_scrape,
+            "entity-follow": self.entity_follow,
+        }
+        while True:
+            for flow, deployment in deployments.items():
+                state = dict(self.flow_state.get(flow, {"flow": flow}))
+                state["switch"] = deployment.switch()
+                state["today"] = self._today(flow)
+                state["last_run"] = self._last_run(deployment)
+                state.setdefault("phase", "idle")
+                state.setdefault("gate", _gate(True))
+                state.setdefault("next_trigger_at", None)
+                commands = await self.agent.heartbeat(state)
+                if commands:
+                    log.warning(
+                        f"{flow}: received commands {commands} but command "
+                        "handling isn't wired into wait_until yet"
+                    )
+            await asyncio.sleep(wait)
 
     async def serve(self):
         await self.tl.start()
@@ -226,6 +352,7 @@ class Prefect:
         asyncio.create_task(self.entity_classify_trigger())
         asyncio.create_task(self.entity_scrape_trigger())
         asyncio.create_task(self.entity_follow_trigger())
+        asyncio.create_task(self.heartbeat_loop())
 
         log.info("Insta Automate Scheduler and Trigerrer started!")
 
