@@ -55,11 +55,17 @@ class Deployment:
         return get_key(CONFIG, self._switch) != "0"
 
     async def trigger(
-        self, wait: bool = True, parameters: dict[str, Any] = {}, retries: int = 3
+        self,
+        wait: bool = True,
+        parameters: dict[str, Any] = {},
+        retries: int = 3,
+        force: bool = False,
     ) -> FlowRun | None:
-        if not self.switch():
+        if not self.switch() and not force:
             log.warning(f"Flow switch `{self._switch}` is OFF. Skipping trigger.")
             return
+        if force and not self.switch():
+            log.warning(f"Flow switch `{self._switch}` is OFF, but forcing the trigger anyway.")
         attempt = 1
         while attempt <= retries:
             try:
@@ -198,7 +204,7 @@ class Prefect:
                     return wake
         return "elapsed"
 
-    async def entity_ingest_trigger(self):
+    async def entity_ingest_trigger(self, force: bool = False):
         if self.entity_ingest_queued:
             log.warning(
                 "Entity ingest flow is already in queue. Skipping this trigger."
@@ -207,7 +213,7 @@ class Prefect:
             self.entity_ingest_queued = True
             log.info("New entities found to ingest.")
             self.inet.wait_for_network()
-            await self.entity_ingest.trigger()
+            await self.entity_ingest.trigger(force=force)
             await self.ping_telegram()
             self.entity_ingest_queued = False
 
@@ -216,7 +222,7 @@ class Prefect:
             force = self._consume("entity-ingest", "force_run")
             if await self.tl.entities_exist or force:
                 self._set_state("entity-ingest", phase="triggering", gate=self._trigger_gate(force))
-                await self.entity_ingest_trigger()
+                await self.entity_ingest_trigger(force=force)
             else:
                 self._set_state(
                     "entity-ingest", gate=_gate(False, "no_work", "no new entities in the channel")
@@ -229,7 +235,7 @@ class Prefect:
             if jpegs(SCANNED_DIR) or force:
                 log.info("Scanned entities found to classify.")
                 self._set_state("entity-classify", phase="triggering", gate=self._trigger_gate(force))
-                await self.entity_classify.trigger()
+                await self.entity_classify.trigger(force=force)
                 await self.ping_telegram()
             else:
                 self._set_state(
@@ -255,7 +261,7 @@ class Prefect:
                 log.info(
                     f"Trigerring scan for:\n{entities[0].model_dump_json(indent=4)}"
                 )
-                await self.entity_scan.trigger(parameters={"url": entities[0].url})
+                await self.entity_scan.trigger(parameters={"url": entities[0].url}, force=force)
                 await self.wait_until("entity-scan", "SCAN_WAIT")
             else:
                 self._set_state(
@@ -279,7 +285,7 @@ class Prefect:
                 self._set_state("entity-scrape", phase="triggering", gate=self._trigger_gate(force))
                 await wait_for_device(self.tl)
                 log.info("Queued entities are requested to scrape.")
-                await self.entity_scrape.trigger()
+                await self.entity_scrape.trigger(force=force)
                 await self.ping_telegram()
                 await self.wait_until("entity-scrape", "SCRAPE_WAIT")
             else:
@@ -308,7 +314,7 @@ class Prefect:
                 self._set_state("entity-follow", phase="triggering", gate=self._trigger_gate(force))
                 await wait_for_device(self.tl)
                 log.info("Queued entities found to follow.")
-                await self.entity_follow.trigger()
+                await self.entity_follow.trigger(force=force)
                 await self.ping_telegram()
                 await self.wait_until("entity-follow", "FOLLOW_WAIT")
             else:
