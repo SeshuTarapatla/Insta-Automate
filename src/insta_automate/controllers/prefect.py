@@ -1,5 +1,5 @@
 import asyncio
-from datetime import date, datetime, timedelta
+from datetime import date
 from inspect import isawaitable
 from typing import Any, cast
 
@@ -19,7 +19,7 @@ from insta_automate.controllers.postgres import IaSession
 from insta_automate.controllers.telegram import IaTelegram
 from insta_automate.models.entity import Entity
 from insta_automate.models.follow import Follow
-from insta_automate.models.meta import Limit
+from insta_automate.models.meta import Config
 from insta_automate.models.scan import Scan
 from insta_automate.models.scrape import Scrape
 from insta_automate.tasks.device import wait_for_device
@@ -111,14 +111,28 @@ class Prefect:
         log.info("Pinging telegram to keep session alive.")
         await self.tl.start()
 
-    async def keep_telegram_alive(self, wait: float = 1800):
+    async def keep_telegram_alive(self):
         while True:
-            await asyncio.sleep(wait)
+            await self.wait_until("telegram-keepalive", "TG_KEEPALIVE_WAIT")
             await self.ping_telegram()
 
     async def wait_day_change(self, date: date):
         while date == Timestamp().date():
-            await asyncio.sleep(60)
+            await asyncio.sleep(Config.get("DAY_CHANGE_POLL"))
+
+    async def wait_until(self, flow: str, key: str) -> str:
+        """Sleep in Config.get("TICK") increments, re-reading Config.get(key)
+        every tick so an edited delay re-targets the deadline live. Returns
+        the wake reason - "elapsed" is the only one until CP 3.3/3.4 wire a
+        command queue through the agent."""
+        if target := Config.get(key):
+            log.info(f"{flow}: waiting {target}s ({key}) before next trigger.")
+        elapsed = 0.0
+        while elapsed < (target := Config.get(key)):
+            tick = min(Config.get("TICK"), target - elapsed)
+            await asyncio.sleep(tick)
+            elapsed += tick
+        return "elapsed"
 
     async def entity_ingest_trigger(self):
         if self.entity_ingest_queued:
@@ -133,19 +147,19 @@ class Prefect:
             await self.ping_telegram()
             self.entity_ingest_queued = False
 
-    async def entity_ingest_time_trigger(self, wait: float = 600):
+    async def entity_ingest_time_trigger(self):
         while True:
             if await self.tl.entities_exist:
                 await self.entity_ingest_trigger()
-            await asyncio.sleep(wait)
+            await self.wait_until("entity-ingest", "INGEST_POLL_WAIT")
 
-    async def entity_classify_trigger(self, wait: float = 10):
+    async def entity_classify_trigger(self):
         while True:
             if jpegs(SCANNED_DIR):
                 log.info("Scanned entities found to classify.")
                 await self.entity_classify.trigger()
                 await self.ping_telegram()
-            await asyncio.sleep(wait)
+            await self.wait_until("entity-classify", "CLASSIFY_POLL_WAIT")
 
     async def entity_scan_trigger(self):
         while True:
@@ -155,6 +169,7 @@ class Prefect:
                     "Scan limit reached for the day. Pausing trigger until next day."
                 )
                 await self.wait_day_change(Timestamp().date())
+                continue
             if entities := Entity.fetch_queued_entities(self.session):
                 self.inet.wait_for_network()
                 await wait_for_device(self.tl)
@@ -163,9 +178,10 @@ class Prefect:
                     f"Trigerring scan for:\n{entities[0].model_dump_json(indent=4)}"
                 )
                 await self.entity_scan.trigger(parameters={"url": entities[0].url})
-            await asyncio.sleep(10)
+                await self.wait_until("entity-scan", "SCAN_WAIT")
+            await self.wait_until("entity-scan", "SCAN_POLL_WAIT")
 
-    async def entity_scrape_trigger(self, wait: float = 600, buffer: float = 10):
+    async def entity_scrape_trigger(self):
         while True:
             scrape = Scrape.fetch(self.session)
             if scrape.limit_reached:
@@ -173,18 +189,17 @@ class Prefect:
                     "Scrape limit reached for the day. Pausing trigger until next day."
                 )
                 await self.wait_day_change(Timestamp().date())
-            if len(jpegs(SCRAPED_DIR) + jpegs(FOLLOW_QUEUE_DIR)) < Limit.get("FOLLOW") * 3:
+                continue
+            backpressure = Config.get("FOLLOW") * Config.get("SCRAPE_BACKPRESSURE_FACTOR")
+            if len(jpegs(SCRAPED_DIR) + jpegs(FOLLOW_QUEUE_DIR)) < backpressure:
                 await wait_for_device(self.tl)
                 log.info("Queued entities are requested to scrape.")
                 await self.entity_scrape.trigger()
                 await self.ping_telegram()
-                log.info(
-                    f"Next Scrape trigger at: {datetime.now() + timedelta(seconds=wait + buffer)}"
-                )
-                await asyncio.sleep(wait)
-            await asyncio.sleep(buffer)
+                await self.wait_until("entity-scrape", "SCRAPE_WAIT")
+            await self.wait_until("entity-scrape", "SCRAPE_BUFFER")
 
-    async def entity_follow_trigger(self, wait: float = 1200, buffer: float = 10):
+    async def entity_follow_trigger(self):
         while True:
             follow = Follow.fetch(self.session)
             if follow.limit_reached:
@@ -192,16 +207,14 @@ class Prefect:
                     "Follow limit reached for the day. Pausing trigger until next day."
                 )
                 await self.wait_day_change(Timestamp().date())
+                continue
             if jpegs(FOLLOW_QUEUE_DIR):
                 await wait_for_device(self.tl)
                 log.info("Queued entities found to follow.")
                 await self.entity_follow.trigger()
                 await self.ping_telegram()
-                log.info(
-                    f"Next Follow trigger at: {datetime.now() + timedelta(seconds=wait + buffer)}"
-                )
-                await asyncio.sleep(wait)
-            await asyncio.sleep(buffer)
+                await self.wait_until("entity-follow", "FOLLOW_WAIT")
+            await self.wait_until("entity-follow", "FOLLOW_BUFFER")
 
     async def serve(self):
         await self.tl.start()
