@@ -846,6 +846,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "async-typer" },
+    { name = "httpx" },
     { name = "humanize" },
     { name = "my-modules" },
     { name = "ollama" },
@@ -869,6 +870,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "async-typer", specifier = ">=0.1.10" },
+    { name = "httpx", specifier = ">=0.28.1" },
     { name = "humanize", specifier = ">=4.15.0" },
     { name = "my-modules", git = "https://github.com/SeshuTarapatla/my-modules.git" },
     { name = "ollama", specifier = ">=0.6.1" },
