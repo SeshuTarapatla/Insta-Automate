@@ -80,7 +80,7 @@ class Config:
         "DAY_CHANGE_POLL": 60,
         "TICK": 5,
         # Gates
-        "SCRAPE_BACKPRESSURE_FACTOR": 3,
+        "SCRAPE_RESERVE_FACTOR": 3,
         "SCAN_LIST": "auto",
         # Control-center wiring
         "IA_AGENT_URL": "http://172.19.16.1:8787",

@@ -221,7 +221,7 @@ class Prefect:
         while True:
             force = self._consume("entity-ingest", "force_run")
             if await self.tl.entities_exist or force:
-                self._set_state("entity-ingest", phase="triggering", gate=self._trigger_gate(force))
+                self._set_state("entity-ingest", phase="running", gate=self._trigger_gate(force))
                 await self.entity_ingest_trigger(force=force)
             else:
                 self._set_state(
@@ -234,7 +234,7 @@ class Prefect:
             force = self._consume("entity-classify", "force_run")
             if jpegs(SCANNED_DIR) or force:
                 log.info("Scanned entities found to classify.")
-                self._set_state("entity-classify", phase="triggering", gate=self._trigger_gate(force))
+                self._set_state("entity-classify", phase="running", gate=self._trigger_gate(force))
                 await self.entity_classify.trigger(force=force)
                 await self.ping_telegram()
             else:
@@ -254,7 +254,7 @@ class Prefect:
                 await self.wait_day_change(Timestamp().date(), flow="entity-scan")
                 continue
             if entities := Entity.fetch_queued_entities(self.session):
-                self._set_state("entity-scan", phase="triggering", gate=self._trigger_gate(force))
+                self._set_state("entity-scan", phase="running", gate=self._trigger_gate(force))
                 self.inet.wait_for_network()
                 await wait_for_device(self.tl)
                 log.info(f"Total entities queued for scan: {len(entities)}")
@@ -279,10 +279,10 @@ class Prefect:
                 )
                 await self.wait_day_change(Timestamp().date(), flow="entity-scrape")
                 continue
-            backpressure = Config.get("FOLLOW") * Config.get("SCRAPE_BACKPRESSURE_FACTOR")
+            backpressure = Config.get("FOLLOW") * Config.get("SCRAPE_RESERVE_FACTOR")
             count = len(jpegs(SCRAPED_DIR) + jpegs(FOLLOW_QUEUE_DIR))
             if count < backpressure or force:
-                self._set_state("entity-scrape", phase="triggering", gate=self._trigger_gate(force))
+                self._set_state("entity-scrape", phase="running", gate=self._trigger_gate(force))
                 await wait_for_device(self.tl)
                 log.info("Queued entities are requested to scrape.")
                 await self.entity_scrape.trigger(parameters={"force": force}, force=force)
@@ -295,7 +295,7 @@ class Prefect:
                         False,
                         "backpressure",
                         f"scraped+follow_queued = {count} ≥ FOLLOW×"
-                        f"{Config.get('SCRAPE_BACKPRESSURE_FACTOR')} = {backpressure}",
+                        f"{Config.get('SCRAPE_RESERVE_FACTOR')} = {backpressure}",
                     ),
                 )
             await self.wait_until("entity-scrape", "SCRAPE_BUFFER")
@@ -311,7 +311,7 @@ class Prefect:
                 await self.wait_day_change(Timestamp().date(), flow="entity-follow")
                 continue
             if jpegs(FOLLOW_QUEUE_DIR):
-                self._set_state("entity-follow", phase="triggering", gate=self._trigger_gate(force))
+                self._set_state("entity-follow", phase="running", gate=self._trigger_gate(force))
                 await wait_for_device(self.tl)
                 log.info("Queued entities found to follow.")
                 await self.entity_follow.trigger(parameters={"force": force}, force=force)
