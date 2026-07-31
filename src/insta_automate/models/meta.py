@@ -49,10 +49,15 @@ class EntityRequest(StrEnum):
     FOLLOWING = "Following"
 
 
-class Limit:
-    """Live limit values, read from config.env with these as fallback defaults."""
+class Config:
+    """Live config values, read from config.env with these as fallback defaults.
 
-    _DEFAULTS = {
+    Type comes from the default's own type (bool checked before int, since
+    bool is an int subclass), so a key's type is declared once, here.
+    """
+
+    _DEFAULTS: dict[str, int | float | bool | str] = {
+        # Limits
         "PROFILES": 10,
         "REELS": 30,
         "POSTS": 30,
@@ -62,12 +67,42 @@ class Limit:
         "FOLLOW_BATCH": 5,
         "FMIN": 100,
         "FMAX": 2000,
+        # Trigger timings (seconds)
+        "TG_KEEPALIVE_WAIT": 1800,
+        "INGEST_POLL_WAIT": 600,
+        "SCAN_POLL_WAIT": 10,
+        "SCAN_WAIT": 0,
+        "CLASSIFY_POLL_WAIT": 10,
+        "SCRAPE_WAIT": 600,
+        "SCRAPE_BUFFER": 10,
+        "FOLLOW_WAIT": 1200,
+        "FOLLOW_BUFFER": 10,
+        "DAY_CHANGE_POLL": 60,
+        "TICK": 5,
+        # Gates
+        "SCRAPE_BACKPRESSURE_FACTOR": 3,
+        "SCAN_LIST": "auto",
+        # Control-center wiring
+        "IA_AGENT_URL": "http://172.19.16.1:8787",
+        "NOTIFY_POLICY": "app_first",
     }
 
     @staticmethod
-    def get(key: str) -> int:
+    def get(key: str) -> int | float | bool | str:
+        default = Config._DEFAULTS[key]
         value = get_key(CONFIG, key)
-        return int(value) if value else Limit._DEFAULTS[key]
+        if not value:
+            return default
+        if isinstance(default, bool):
+            return value != "0"
+        if isinstance(default, int):
+            return int(value)
+        if isinstance(default, float):
+            return float(value)
+        return value
+
+
+Limit = Config
 
 
 class AccessPrediction(BaseModel):
