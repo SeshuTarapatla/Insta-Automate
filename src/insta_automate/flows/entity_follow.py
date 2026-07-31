@@ -24,7 +24,7 @@ from insta_automate.vars import FOLLOW_QUEUE_DIR
 
 
 @ia_flow()
-async def entity_follow(entity: str | None = None, n: int | None = None):
+async def entity_follow(entity: str | None = None, n: int | None = None, force: bool = False):
     log = get_run_logger()
     n = n if n is not None else Limit.get("FOLLOW_BATCH")
     followed, processed, follow_queue = 0, 0, FOLLOW_QUEUE.copy()
@@ -46,10 +46,10 @@ async def entity_follow(entity: str | None = None, n: int | None = None):
         switch_account("main", device)
 
         for entry in follow_queue:
-            if (followed >= n) or follow.limit_reached:
+            if (followed >= n) or (follow.limit_reached and not force):
                 break
             log.info(f"Following from entity: @{entry.name}")
-            while (followed < n) and (not follow.limit_reached):
+            while (followed < n) and (force or not follow.limit_reached):
                 image = choice(jpegs(entry, shuffle=True) or [None])
                 if not image:
                     log.warning(f"No more entities found to follow in @{entry.name}.")
@@ -67,11 +67,17 @@ async def entity_follow(entity: str | None = None, n: int | None = None):
             f"Follow flow complete. Total followed on {Timestamp().date()}: {follow.followed}/{Limit.get('FOLLOW')}"
         )
         if follow.limit_reached:
-            log.warning("Follow limit has reached for the day.")
-            tl = await IaTelegram.get_client()
-            await tl.bot.notify(
-                f"Follow limit reached for {Timestamp().date()}. Limit: {follow.followed}"
-            )
+            if force:
+                log.info(
+                    f"Follow limit reached for the day ({follow.followed}) but this run was "
+                    "forced, so it kept going."
+                )
+            else:
+                log.warning("Follow limit has reached for the day.")
+                tl = await IaTelegram.get_client()
+                await tl.bot.notify(
+                    f"Follow limit reached for {Timestamp().date()}. Limit: {follow.followed}"
+                )
         await db_backup()
         rm_empty_subdirs()
     else:

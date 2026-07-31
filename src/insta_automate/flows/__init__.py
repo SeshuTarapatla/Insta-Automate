@@ -14,6 +14,7 @@ from prefect.runtime import flow_run
 
 from insta_automate.utils import set_logger_propagation
 from insta_automate.vars import (
+    GIT_BRANCH,
     GIT_URL,
     IA_PREFECT_WORKPOOL,
 )
@@ -37,7 +38,7 @@ def ia_flow(
 class IaFlows:
     @staticmethod
     async def deploy_all():
-        src = GitRepository(url=GIT_URL)
+        src = GitRepository(url=GIT_URL, branch=GIT_BRANCH or None)
         base = f"src/{__name__.replace('.', '/')}"
         for module in iter_modules(__path__):
             flow_name = module.name

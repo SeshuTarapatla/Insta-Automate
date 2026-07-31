@@ -15,6 +15,11 @@ BANNER: str = (ASSETS / "banner.txt").read_text(encoding="utf-8")
 ANDROID_PIN: str = getenv("ANDROID_PIN", "")
 ANDROID_SERIAL: str = getenv("ANDROID_SERIAL", "")
 GIT_URL: str = getenv("GIT_URL", "")
+# Which branch flow deployments are sourced from (GitRepository, flows/__init__.py).
+# Empty means "the remote's default branch" - i.e. main in production. Only ever set
+# this for testing an unmerged branch's flow code before it's accepted (rule: other
+# repos are feature-branch only, never merged early - see CLAUDE.md).
+GIT_BRANCH: str = getenv("GIT_BRANCH", "")
 IA_AGENT_TOKEN: str = getenv("IA_AGENT_TOKEN", "")
 IA_ALT_ACCOUNT: str = getenv("IA_ALT_ACCOUNT", "")
 IA_DIR: Path = Path(getenv("IA_DIR", ""))

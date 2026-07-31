@@ -25,7 +25,7 @@ from insta_automate.vars import SCRAPE_QUEUE_DIR, SCRAPED_DIR
 
 
 @ia_flow()
-async def entity_scrape(entity: str | None = None, n: int | None = None):
+async def entity_scrape(entity: str | None = None, n: int | None = None, force: bool = False):
     log = get_run_logger()
     n = n if n is not None else Limit.get("SCRAPE_BATCH")
     scraped, processed, scrape_queue = 0, 0, SCRAPE_QUEUE.copy()
@@ -48,10 +48,10 @@ async def entity_scrape(entity: str | None = None, n: int | None = None):
         switch_account("alt", device)
 
         for entry in scrape_queue:
-            if (scraped >= n) or scrape.limit_reached:
+            if (scraped >= n) or (scrape.limit_reached and not force):
                 break
             log.info(f"Scraping from entity: @{entry.name}")
-            while (scraped < n) and (not scrape.limit_reached):
+            while (scraped < n) and (force or not scrape.limit_reached):
                 image = choice(jpegs(entry, shuffle=True) or [None])
                 if not image:
                     log.warning(f"No more entities found to scrape in @{entry.name}.")
@@ -70,10 +70,16 @@ async def entity_scrape(entity: str | None = None, n: int | None = None):
         log.info(f"Scrape complete. Processed: {processed}, Scraped: {scraped}")
         await notify_new_entities_scraped() if scraped else None
         if scrape.limit_reached:
-            tl = await IaTelegram.get_client()
-            await tl.bot.notify(
-                f"Scrape limit reached for {Timestamp().date()}. Limit: {scrape.scraped}"
-            )
+            if force:
+                log.info(
+                    f"Scrape limit reached for the day ({scrape.scraped}) but this run was "
+                    "forced, so it kept going."
+                )
+            else:
+                tl = await IaTelegram.get_client()
+                await tl.bot.notify(
+                    f"Scrape limit reached for {Timestamp().date()}. Limit: {scrape.scraped}"
+                )
         await db_backup()
         rm_empty_subdirs()
     else:

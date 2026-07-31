@@ -285,7 +285,7 @@ class Prefect:
                 self._set_state("entity-scrape", phase="triggering", gate=self._trigger_gate(force))
                 await wait_for_device(self.tl)
                 log.info("Queued entities are requested to scrape.")
-                await self.entity_scrape.trigger(force=force)
+                await self.entity_scrape.trigger(parameters={"force": force}, force=force)
                 await self.ping_telegram()
                 await self.wait_until("entity-scrape", "SCRAPE_WAIT")
             else:
@@ -314,7 +314,7 @@ class Prefect:
                 self._set_state("entity-follow", phase="triggering", gate=self._trigger_gate(force))
                 await wait_for_device(self.tl)
                 log.info("Queued entities found to follow.")
-                await self.entity_follow.trigger(force=force)
+                await self.entity_follow.trigger(parameters={"force": force}, force=force)
                 await self.ping_telegram()
                 await self.wait_until("entity-follow", "FOLLOW_WAIT")
             else:
