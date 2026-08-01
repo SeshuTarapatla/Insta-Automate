@@ -1,6 +1,5 @@
 import asyncio
 from pathlib import Path
-from typing import cast
 
 from my_modules.datetime_utils import Timestamp
 from my_modules.inet import Internet
@@ -8,11 +7,11 @@ from PIL import Image
 from prefect import get_run_logger
 from sqlalchemy import func
 from sqlmodel import Session, select
-from telethon.hints import FileLike
 
 from insta_automate.controllers.agent import AgentClient
 from insta_automate.controllers.cli import append_entity
 from insta_automate.controllers.device import IaDevice
+from insta_automate.controllers.notify import notify
 from insta_automate.controllers.postgres import IaSession
 from insta_automate.controllers.telegram import IaTelegram
 from insta_automate.exceptions import InvalidEntity
@@ -98,9 +97,11 @@ async def add_new_entity(
         if (_entity := entity.fetch(session)) is not None:
             log.warning(f"Entity already exists: {_entity.model_dump_json(indent=4)}")
             img = ENTITY_DIR / f"{_entity.id}.jpg"
-            await tl.bot.notify(
-                message=f"[@{_entity.id}]({url}) has been already {'scraped' if _entity.status == EntityStatus.COMPLETED else 'added'}.",
-                file=img if img.exists() else cast(FileLike, None),
+            await notify(
+                f"[@{_entity.id}]({url}) has been already {'scraped' if _entity.status == EntityStatus.COMPLETED else 'added'}.",
+                image=img,
+                tags=("entity",),
+                tl=tl,
             )
         else:
             log.info(f"Entity type is determined to be: {entity.type.upper()}")
@@ -534,7 +535,7 @@ async def profile_follow(
     if ui.followed_by.exists:
         msg = f"**[@{entity.id}]({entity.url})** is {ui.followed_by.get_text()}"
         log.error(msg)
-        await tl.bot.notify(msg, file=img)
+        await notify(msg, image=img, level="warn", tags=("follow",), tl=tl)
         await AgentClient().emit({
             "flow": "entity-follow", "kind": "follow.result",
             "entity": id, "subject": id, "image": str(rel_img), "verdict": "FOLLOWED_BY",

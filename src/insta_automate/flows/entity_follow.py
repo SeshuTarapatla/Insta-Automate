@@ -6,8 +6,8 @@ from my_modules.datetime_utils import Timestamp
 from prefect import get_run_logger
 
 from insta_automate.controllers.agent import AgentClient
-from insta_automate.controllers.cli import IaTelegram
 from insta_automate.controllers.instagram import Insta
+from insta_automate.controllers.notify import notify
 from insta_automate.controllers.prefect import IaSession
 from insta_automate.controllers.queue import FOLLOW_QUEUE
 from insta_automate.exceptions import InvalidEntity
@@ -77,9 +77,10 @@ async def entity_follow(entity: str | None = None, n: int | None = None, force: 
                 )
             else:
                 log.warning("Follow limit has reached for the day.")
-                tl = await IaTelegram.get_client()
-                await tl.bot.notify(
-                    f"Follow limit reached for {Timestamp().date()}. Limit: {follow.followed}"
+                await notify(
+                    f"Follow limit reached for {Timestamp().date()}. Limit: {follow.followed}",
+                    level="warn",
+                    tags=("follow", "limit"),
                 )
         await db_backup()
         rm_empty_subdirs()

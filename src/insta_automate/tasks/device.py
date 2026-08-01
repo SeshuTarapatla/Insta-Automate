@@ -4,11 +4,10 @@ from my_modules.inet import Internet
 from my_modules.logger import get_logger
 from prefect import get_run_logger
 
-from typing import Literal, cast
-
-from telethon.types import Message
+from typing import Literal
 
 from insta_automate.controllers.device import IaDevice
+from insta_automate.controllers.notify import notify
 from insta_automate.controllers.telegram import IaTelegram
 from insta_automate.models.entity import Entity
 from insta_automate.models.meta import EntityAccess
@@ -62,15 +61,16 @@ async def network_access(object: Internet | IaDevice | None = None):
 async def wait_for_device(tl: IaTelegram | None = None) -> IaDevice:
     log = get_logger(__name__)
     tl = tl or (await IaTelegram.get_client())
-    notification: Message = cast(Message, None)
+    notified = False
     while not IaDevice.connected():
-        if notification is None:
+        if not notified:
             log.error(IaMessages.DEVICE_DISCONNECTED)
-            notification = await tl.bot.notify(IaMessages.DEVICE_DISCONNECTED)
+            await notify(IaMessages.DEVICE_DISCONNECTED, level="error", tags=("device",), tl=tl)
+            notified = True
         await asyncio.sleep(1)
     log.info(IaMessages.DEVICE_CONNECTED)
-    if notification is not None:
-        await tl.bot.notify(IaMessages.DEVICE_CONNECTED, transient=True)
+    if notified:
+        await notify(IaMessages.DEVICE_CONNECTED, transient=True, tags=("device",), tl=tl)
         await tl.purge_adb_notifications()
     device = IaDevice()
     device.start_scrcpy()
