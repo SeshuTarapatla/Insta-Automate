@@ -9,6 +9,23 @@ from insta_automate.vars import IA_AGENT_TOKEN
 log = get_logger(__name__)
 
 
+def _current_flow_run_id() -> str | None:
+    """Every `emit()`/`emit_sync()` call needs this so the Live screen (CP 4.4)
+    can scope events/logs to one specific run rather than just "this flow in
+    general" - two back-to-back runs of `entity-scrape` would otherwise mix
+    together. Injected centrally here rather than threaded through every call
+    site: `prefect.runtime.flow_run.id` resolves correctly from inside a task
+    too, not just the flow body, since it reads the enclosing flow run's
+    context. `None` outside an orchestrated run (e.g. a bare function call in
+    a script), never raised."""
+    try:
+        from prefect.runtime import flow_run
+
+        return flow_run.id
+    except Exception:
+        return None
+
+
 class AgentClient:
     """Talks to ia-agent over the LAN. Every method swallows failures - the
     agent being unreachable from inside the pod must never affect the
@@ -39,7 +56,8 @@ class AgentClient:
         failures swallowed - a scrape must never break because the agent
         is down or the event endpoint (CP 4.2) doesn't exist yet."""
         try:
-            await self._client.post(self._url("/api/events"), json=event, timeout=1.0)
+            body = {"flow_run_id": _current_flow_run_id(), **event}
+            await self._client.post(self._url("/api/events"), json=body, timeout=1.0)
         except Exception:
             pass
 
@@ -91,9 +109,10 @@ def emit_sync(event: dict[str, Any]) -> None:
     blocking POST costs nothing next to the AI inference call each iteration
     already makes. Same failure-swallowing contract as `emit`."""
     try:
+        body = {"flow_run_id": _current_flow_run_id(), **event}
         httpx.post(
             f"{str(Config.get('IA_AGENT_URL')).rstrip('/')}/api/events",
-            json=event,
+            json=body,
             headers={"Authorization": f"Bearer {IA_AGENT_TOKEN}"} if IA_AGENT_TOKEN else {},
             timeout=1.0,
         )
