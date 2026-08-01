@@ -62,7 +62,17 @@ async def wait_for_device(tl: IaTelegram | None = None) -> IaDevice:
     log = get_logger(__name__)
     tl = tl or (await IaTelegram.get_client())
     notified = False
-    while not IaDevice.connected():
+    while True:
+        try:
+            connected = IaDevice.connected()
+        except Exception:
+            # A transient adb server hiccup (e.g. a version-mismatched client
+            # restarting it) raises here instead of just returning False -
+            # treat it the same as "not connected yet" rather than letting it
+            # propagate and kill whatever task is waiting on us.
+            connected = False
+        if connected:
+            break
         if not notified:
             log.error(IaMessages.DEVICE_DISCONNECTED)
             await notify(IaMessages.DEVICE_DISCONNECTED, level="error", tags=("device",), tl=tl)
