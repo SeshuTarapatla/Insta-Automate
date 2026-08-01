@@ -3,6 +3,7 @@
 from prefect import get_run_logger
 from pydantic import ValidationError
 
+from insta_automate.controllers.agent import AgentClient
 from insta_automate.controllers.instagram import Insta
 from insta_automate.controllers.telegram import IaTelegram
 from insta_automate.flows import ia_flow
@@ -16,9 +17,12 @@ from insta_automate.vars import ENTITY_DIR
 @ia_flow()
 async def entity_ingest():
     log = get_run_logger()
+    agent = AgentClient()
+    await agent.emit({"flow": "entity_ingest", "kind": "flow.started"})
     tl = await IaTelegram.get_client()
     device = await device_ready(tl)
     entity = None
+    processed = 0
 
     ENTITY_DIR.mkdir(exist_ok=True, parents=True)
 
@@ -27,6 +31,7 @@ async def entity_ingest():
         try:
             if text.startswith(Insta.URL):
                 entity = await add_new_entity(text, device, tl)
+                processed += 1
             else:
                 append_entity_to_queue(text)
         except ValidationError:
@@ -39,6 +44,10 @@ async def entity_ingest():
         await db_backup()
     else:
         log.error("No entities found to ingest.")
+    await agent.emit({
+        "flow": "entity_ingest", "kind": "flow.completed",
+        "counters": {"processed": processed},
+    })
 
 
 if __name__ == "__main__":

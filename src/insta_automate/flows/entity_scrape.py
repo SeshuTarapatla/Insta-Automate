@@ -5,6 +5,7 @@ from random import choice
 from my_modules.datetime_utils import Timestamp
 from prefect import get_run_logger
 
+from insta_automate.controllers.agent import AgentClient
 from insta_automate.controllers.cli import IaTelegram
 from insta_automate.controllers.instagram import Insta
 from insta_automate.controllers.prefect import IaSession
@@ -27,6 +28,8 @@ from insta_automate.vars import SCRAPE_QUEUE_DIR, SCRAPED_DIR
 @ia_flow()
 async def entity_scrape(entity: str | None = None, n: int | None = None, force: bool = False):
     log = get_run_logger()
+    agent = AgentClient()
+    await agent.emit({"flow": "entity_scrape", "kind": "flow.started", "entity": entity})
     n = n if n is not None else Limit.get("SCRAPE_BATCH")
     scraped, processed, scrape_queue = 0, 0, SCRAPE_QUEUE.copy()
     if entity:
@@ -82,8 +85,16 @@ async def entity_scrape(entity: str | None = None, n: int | None = None, force: 
                 )
         await db_backup()
         rm_empty_subdirs()
+        await agent.emit({
+            "flow": "entity_scrape", "kind": "flow.completed", "entity": entity,
+            "counters": {"processed": processed, "scraped": scraped},
+        })
     else:
         log.error("No entities found to scrape")
+        await agent.emit({
+            "flow": "entity_scrape", "kind": "flow.completed", "entity": entity,
+            "reason": "no work",
+        })
 
 
 if __name__ == "__main__":

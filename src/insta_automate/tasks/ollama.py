@@ -3,6 +3,7 @@ from typing import TypeVar
 from prefect import get_run_logger
 from sqlmodel import Session
 
+from insta_automate.controllers.agent import emit_sync
 from insta_automate.controllers.ollama import (
     AccessClassifier,
     AiClassifier,
@@ -16,6 +17,7 @@ from insta_automate.utils import jpegs, move, rm_empty_subdirs
 from insta_automate.vars import (
     GENDER_INVALID_DIR,
     GENDER_VALID_DIR,
+    IA_DIR,
     OLLAMA_VL_MODEL,
     SCANNED_DIR,
 )
@@ -49,6 +51,11 @@ def remove_public(session: Session | None = None) -> tuple[int, int, int]:
         )
         session.merge(scanned)
         session.commit()
+        emit_sync({
+            "flow": "entity_classify", "kind": "classify.access",
+            "entity": entity.parent.name, "subject": scanned.id,
+            "image": str(entity.relative_to(IA_DIR)), "verdict": scanned.access.upper(),
+        })
         match scanned.access:
             case EntityAccess.PRIVATE:
                 private += 1
@@ -87,6 +94,11 @@ def gender_classify(session: Session | None = None) -> tuple[int, int, int]:
         )
         session.merge(scanned)
         session.commit()
+        emit_sync({
+            "flow": "entity_classify", "kind": "classify.gender",
+            "entity": entity.parent.name, "subject": scanned.id,
+            "image": str(entity.relative_to(IA_DIR)), "verdict": scanned.gender.upper(),
+        })
         match scanned.gender:
             case Gender.FEMALE:
                 female += 1

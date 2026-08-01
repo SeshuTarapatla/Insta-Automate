@@ -10,6 +10,7 @@ from sqlalchemy import func
 from sqlmodel import Session, select
 from telethon.hints import FileLike
 
+from insta_automate.controllers.agent import AgentClient
 from insta_automate.controllers.cli import append_entity
 from insta_automate.controllers.device import IaDevice
 from insta_automate.controllers.postgres import IaSession
@@ -109,6 +110,12 @@ async def add_new_entity(
             log.info(entity.model_dump_json(indent=4))
             log.info("Adding entry to Entity table.")
             entity.update(session)
+            await AgentClient().emit({
+                "flow": "entity_ingest", "kind": "entity.added",
+                "entity": entity.id, "subject": entity.id,
+                "image": f"entities/{entity.id}.jpg",
+                "extra": {"type": entity.type, "access": entity.access, "url": url},
+            })
     return entity
 
 
@@ -179,6 +186,12 @@ async def profile_entity_scan(
             else:
                 _list, list_element = "following", ui.profile_following
         log.info(f"Opening profile {_list} list.")
+        await AgentClient().emit({
+            "flow": "entity_scan", "kind": "scan.started",
+            "entity": entity.id, "subject": entity.id,
+            "image": f"entities/{entity.id}.jpg",
+            "extra": {"list": _list, "f1": profile.f1, "f2": profile.f2},
+        })
         list_element.click()
         ui.follower_container.must_wait()
 
@@ -214,6 +227,12 @@ async def profile_entity_scan(
                 log.info(
                     f"[{added}/{scanned}] @{current} | Exported to: {jpeg.relative_to(IA_DIR)}"
                 )
+                await AgentClient().emit({
+                    "flow": "entity_scan", "kind": "scan.item",
+                    "entity": entity.id, "subject": current,
+                    "image": str(jpeg.relative_to(IA_DIR)),
+                    "counters": {"added": added, "scanned": scanned},
+                })
         entity.update(session)
         await ensure_network(device)
         device.swipe_list(elements, wait=0)
@@ -236,9 +255,16 @@ async def profile_entity_scan(
 
     # update entity status to COMPLETE and return
     entity.update(session, status=EntityStatus.COMPLETED)
+    duration = Timestamp() - started
     log.info(
-        f"Scan complete. Scanned total: {scanned} | New entities: {added} | Total time taken: {Timestamp() - started} "
+        f"Scan complete. Scanned total: {scanned} | New entities: {added} | Total time taken: {duration} "
     )
+    await AgentClient().emit({
+        "flow": "entity_scan", "kind": "scan.completed",
+        "entity": entity.id, "subject": entity.id,
+        "counters": {"scanned": scanned, "added": added},
+        "extra": {"duration_s": duration.total_seconds()},
+    })
     device.press("back")
     return True
 
@@ -277,6 +303,12 @@ async def post_entity_scan(
         raise Exception("Failed to open likes.")
     likes_element.click(offset=(0, 0.5))
     ui.likes_drag_bar.drag_to(0, 0)
+    await AgentClient().emit({
+        "flow": "entity_scan", "kind": "scan.started",
+        "entity": entity.id, "subject": entity.id,
+        "image": f"entities/{entity.id}.jpg",
+        "extra": {"list": "likes"},
+    })
 
     # variable initialization
     scanned_dir = SCANNED_DIR / entity.id
@@ -309,6 +341,12 @@ async def post_entity_scan(
                 log.info(
                     f"[{added}/{scanned}] @{current} | Exported to: {jpeg.relative_to(IA_DIR)}"
                 )
+                await AgentClient().emit({
+                    "flow": "entity_scan", "kind": "scan.item",
+                    "entity": entity.id, "subject": current,
+                    "image": str(jpeg.relative_to(IA_DIR)),
+                    "counters": {"added": added, "scanned": scanned},
+                })
         entity.update(session)
         await ensure_network(device)
         device.swipe_list(elements, wait=0)
@@ -320,9 +358,16 @@ async def post_entity_scan(
 
     # update entity status to COMPLETE and return
     entity.update(session, status=EntityStatus.COMPLETED)
+    duration = Timestamp() - started
     log.info(
-        f"Scan complete. Scanned total: {scanned} | New entities: {added} | Total time taken: {Timestamp() - started} "
+        f"Scan complete. Scanned total: {scanned} | New entities: {added} | Total time taken: {duration} "
     )
+    await AgentClient().emit({
+        "flow": "entity_scan", "kind": "scan.completed",
+        "entity": entity.id, "subject": entity.id,
+        "counters": {"scanned": scanned, "added": added},
+        "extra": {"duration_s": duration.total_seconds()},
+    })
     device.press("back")
     return True
 
@@ -355,6 +400,12 @@ async def profile_scrape(
             log.error(f"@{id}: Profile not found")
             return False
 
+    rel_img = img.relative_to(IA_DIR)
+    await AgentClient().emit({
+        "flow": "entity_scrape", "kind": "scrape.started",
+        "entity": id, "subject": id, "image": str(rel_img),
+    })
+
     user = User.from_ui(ui, session)
     if access := device._profile_entity_access():
         user.access = access
@@ -364,17 +415,35 @@ async def profile_scrape(
         log.error(
             f"@{id} access is found out to be: {EntityAccess.PUBLIC.upper()}. Skipping scrape."
         )
+        await AgentClient().emit({
+            "flow": "entity_scrape", "kind": "scrape.skipped",
+            "entity": id, "subject": id, "image": str(rel_img), "reason": "PUBLIC",
+        })
         return False
     elif user.p == 0 and (year := device.determine_year_joined()) is not None and year < 5:
         log.error(f"@{id} has zero posts. Skipping scrape.")
+        await AgentClient().emit({
+            "flow": "entity_scrape", "kind": "scrape.skipped",
+            "entity": id, "subject": id, "image": str(rel_img), "reason": "NO_POSTS",
+        })
         return False
     elif (_min := min(user.f1, user.f2)) < Limit.get("FMIN"):
         log.error(f"@{id} has {_min} < {Limit.get('FMIN')} followers. Skipping scrape.")
+        await AgentClient().emit({
+            "flow": "entity_scrape", "kind": "scrape.skipped",
+            "entity": id, "subject": id, "image": str(rel_img),
+            "reason": f"f={_min} < FMIN={Limit.get('FMIN')}",
+        })
         return False
     elif user.f1 > Limit.get("FMAX"):
         log.error(
             f"@{id} has {user.f1} > {Limit.get('FMAX')} followers. Skipping scrape."
         )
+        await AgentClient().emit({
+            "flow": "entity_scrape", "kind": "scrape.skipped",
+            "entity": id, "subject": id, "image": str(rel_img),
+            "reason": f"f={user.f1} > FMAX={Limit.get('FMAX')}",
+        })
         return False
 
     profile_page = ui.profile_page.screenshot()
@@ -401,7 +470,13 @@ async def profile_scrape(
     output = SCRAPED_DIR / img.relative_to(SCRAPE_QUEUE_DIR)
     output.parent.mkdir(exist_ok=True, parents=True)
     profile_report.save(output)
-    log.info(f"Scrape exported to {output}")
+    rel_output = output.relative_to(IA_DIR)
+    log.info(f"Scrape exported to {rel_output}")
+    await AgentClient().emit({
+        "flow": "entity_scrape", "kind": "scrape.done",
+        "entity": id, "subject": id, "image": str(rel_output),
+        "counters": {"posts": user.p, "followers": user.f1, "following": user.f2},
+    })
 
     device.press("back")
     await asyncio.sleep(buffer)
@@ -439,20 +514,39 @@ async def profile_follow(
             log.error(f"@{id}: Profile not found")
             return False
 
+    rel_img = img.relative_to(IA_DIR)
+    await AgentClient().emit({
+        "flow": "entity_follow", "kind": "follow.attempt",
+        "entity": id, "subject": id, "image": str(rel_img),
+    })
+
     if device._profile_entity_access() == EntityAccess.PUBLIC:
         log.error(
             f"@{id} access is found out to be: {EntityAccess.PUBLIC.upper()}. Skipping Follow."
         )
+        await AgentClient().emit({
+            "flow": "entity_follow", "kind": "follow.result",
+            "entity": id, "subject": id, "image": str(rel_img),
+            "verdict": "FAILED", "reason": "PUBLIC",
+        })
         return False
 
     if ui.followed_by.exists:
         msg = f"**[@{entity.id}]({entity.url})** is {ui.followed_by.get_text()}"
         log.error(msg)
         await tl.bot.notify(msg, file=img)
+        await AgentClient().emit({
+            "flow": "entity_follow", "kind": "follow.result",
+            "entity": id, "subject": id, "image": str(rel_img), "verdict": "FOLLOWED_BY",
+        })
         return False
 
     if ui.wants_to_follow.exists:
         log.error(f"@{id} already wants to follow you.")
+        await AgentClient().emit({
+            "flow": "entity_follow", "kind": "follow.result",
+            "entity": id, "subject": id, "image": str(rel_img), "verdict": "WANTS_TO_FOLLOW",
+        })
         return False
 
     if ui.profile_follow_button.wait(timeout=5):
@@ -462,17 +556,27 @@ async def profile_follow(
                 ui.profile_follow_action_button.click_gone()
                 log.info(f"@{id} follow successful.")
                 status = True
+                verdict, reason = "FOLLOWED", None
             case EntityRequest.REQUESTED | EntityRequest.FOLLOWING:
                 log.warning(
                     f"@{id} profile request status is already: {current.upper()}"
                 )
                 status = False
+                verdict, reason = current.upper(), None
             case _:
                 log.error(f"@{id} profile unknown status: {current.upper()}")
                 status = False
+                verdict, reason = "FAILED", f"unknown status: {current}"
     else:
         log.error(f"@{id} follow failed.")
         status = False
+        verdict, reason = "FAILED", "follow button not found"
+
+    await AgentClient().emit({
+        "flow": "entity_follow", "kind": "follow.result",
+        "entity": id, "subject": id, "image": str(rel_img),
+        "verdict": verdict, "reason": reason,
+    })
 
     await asyncio.sleep(buffer)
     return status

@@ -3,6 +3,7 @@
 from my_modules.datetime_utils import Timestamp
 from prefect import get_run_logger
 
+from insta_automate.controllers.agent import AgentClient
 from insta_automate.controllers.prefect import IaSession
 from insta_automate.flows import ia_flow
 from insta_automate.tasks.ollama import remove_public, gender_classify
@@ -14,6 +15,8 @@ from insta_automate.vars import SCANNED_DIR
 @ia_flow()
 async def entity_classify():
     log = get_run_logger()
+    agent = AgentClient()
+    await agent.emit({"flow": "entity_classify", "kind": "flow.started"})
     started_at = Timestamp()
     session = IaSession()
     images = jpegs(SCANNED_DIR)
@@ -29,8 +32,14 @@ async def entity_classify():
         if gtotal:
             await notify_new_entities_classified()
         rm_empty_subdirs()
+        await agent.emit({
+            "flow": "entity_classify", "kind": "flow.completed",
+            "counters": {"private": private, "public": public, "female": female, "male": male, "total": total},
+            "extra": {"duration_s": time_taken.total_seconds()},
+        })
     else:
         log.error("No entities found to classify")
+        await agent.emit({"flow": "entity_classify", "kind": "flow.completed", "reason": "no work"})
 
 
 if __name__ == "__main__":

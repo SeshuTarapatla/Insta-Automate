@@ -77,3 +77,25 @@ class AgentClient:
 
     async def aclose(self) -> None:
         await self._client.aclose()
+
+
+def emit_sync(event: dict[str, Any]) -> None:
+    """`AgentClient.emit` for the handful of call sites that are plain sync
+    functions (`tasks/ollama.py`'s `remove_public`/`gender_classify`) rather
+    than `async def`. This has to actually block, not schedule a background
+    task on the running loop: both call sites `unlink()`/`move()` the same
+    image on the very next line, in a tight sync loop that never yields back
+    to the loop until the whole function returns - a scheduled task would
+    only ever run after every file in the batch was already gone, which is
+    exactly the race the agent's image cache (CP 4.2) exists to avoid. A
+    blocking POST costs nothing next to the AI inference call each iteration
+    already makes. Same failure-swallowing contract as `emit`."""
+    try:
+        httpx.post(
+            f"{str(Config.get('IA_AGENT_URL')).rstrip('/')}/api/events",
+            json=event,
+            headers={"Authorization": f"Bearer {IA_AGENT_TOKEN}"} if IA_AGENT_TOKEN else {},
+            timeout=1.0,
+        )
+    except Exception:
+        pass

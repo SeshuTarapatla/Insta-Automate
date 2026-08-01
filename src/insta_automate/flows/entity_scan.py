@@ -2,6 +2,7 @@
 
 from prefect import get_run_logger
 
+from insta_automate.controllers.agent import AgentClient
 from insta_automate.controllers.device import IaDevice
 from insta_automate.controllers.postgres import IaSession
 from insta_automate.flows import ia_flow
@@ -22,6 +23,8 @@ from insta_automate.tasks.telegram import notify_scan_limit_reached, notify_prof
 @ia_flow()
 async def entity_scan(url: str, list: ScanList = ScanList.AUTO, device: IaDevice | None = None):
     log = get_run_logger()
+    agent = AgentClient()
+    await agent.emit({"flow": "entity_scan", "kind": "flow.started", "subject": url})
     session = IaSession()
     status = None
     scan = Scan.fetch(session)
@@ -35,6 +38,11 @@ async def entity_scan(url: str, list: ScanList = ScanList.AUTO, device: IaDevice
     log.info(entity.model_dump_json(indent=4))
     if entity.status == EntityStatus.COMPLETED:
         log.error("This entity has been already scanned.")
+        await agent.emit({
+            "flow": "entity_scan", "kind": "flow.completed",
+            "entity": entity.id, "subject": url,
+            "reason": "already scanned",
+        })
         return
     match entity.type:
         case EntityType.PROFILE:
@@ -53,6 +61,11 @@ async def entity_scan(url: str, list: ScanList = ScanList.AUTO, device: IaDevice
         await db_backup()
     if limit := scan.limit_reached:
         await notify_scan_limit_reached(*limit)
+    await agent.emit({
+        "flow": "entity_scan", "kind": "flow.completed",
+        "entity": entity.id if entity else None, "subject": url,
+        "counters": {"status": bool(status)},
+    })
 
 
 if __name__ == "__main__":
