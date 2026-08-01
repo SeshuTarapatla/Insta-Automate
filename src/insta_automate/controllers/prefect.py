@@ -157,8 +157,12 @@ class Prefect:
 
     async def keep_telegram_alive(self):
         while True:
-            await self.wait_until("telegram-keepalive", "TG_KEEPALIVE_WAIT")
-            await self.ping_telegram()
+            try:
+                await self.wait_until("telegram-keepalive", "TG_KEEPALIVE_WAIT")
+                await self.ping_telegram()
+            except Exception:
+                log.exception("telegram-keepalive: loop raised - recovering after a short wait.")
+                await asyncio.sleep(Config.get("TICK"))
 
     async def wait_day_change(self, date: date, flow: str | None = None):
         if flow:
@@ -236,109 +240,144 @@ class Prefect:
 
     async def entity_ingest_time_trigger(self):
         while True:
-            force = self._consume("entity-ingest", "force_run")
-            if await self.tl.entities_exist or force:
-                self._set_state("entity-ingest", phase="running", gate=self._trigger_gate(force))
-                await self.entity_ingest_trigger(force=force)
-            else:
+            try:
+                force = self._consume("entity-ingest", "force_run")
+                if await self.tl.entities_exist or force:
+                    self._set_state("entity-ingest", phase="running", gate=self._trigger_gate(force))
+                    await self.entity_ingest_trigger(force=force)
+                else:
+                    self._set_state(
+                        "entity-ingest", gate=_gate(False, "no_work", "no new entities in the channel")
+                    )
+                await self.wait_until("entity-ingest", "INGEST_POLL_WAIT")
+            except Exception:
+                log.exception("entity-ingest: trigger loop raised - recovering after a short wait.")
                 self._set_state(
-                    "entity-ingest", gate=_gate(False, "no_work", "no new entities in the channel")
+                    "entity-ingest", gate=_gate(False, "error", "trigger loop raised - see scheduler logs")
                 )
-            await self.wait_until("entity-ingest", "INGEST_POLL_WAIT")
+                await asyncio.sleep(Config.get("TICK"))
 
     async def entity_classify_trigger(self):
         while True:
-            force = self._consume("entity-classify", "force_run")
-            if jpegs(SCANNED_DIR) or force:
-                log.info("Scanned entities found to classify.")
-                self._set_state("entity-classify", phase="running", gate=self._trigger_gate(force))
-                await self.entity_classify.trigger(force=force)
-                await self.ping_telegram()
-            else:
+            try:
+                force = self._consume("entity-classify", "force_run")
+                if jpegs(SCANNED_DIR) or force:
+                    log.info("Scanned entities found to classify.")
+                    self._set_state("entity-classify", phase="running", gate=self._trigger_gate(force))
+                    await self.entity_classify.trigger(force=force)
+                    await self.ping_telegram()
+                else:
+                    self._set_state(
+                        "entity-classify", gate=_gate(False, "no_work", "nothing in scanned/ to classify")
+                    )
+                await self.wait_until("entity-classify", "CLASSIFY_POLL_WAIT")
+            except Exception:
+                log.exception("entity-classify: trigger loop raised - recovering after a short wait.")
                 self._set_state(
-                    "entity-classify", gate=_gate(False, "no_work", "nothing in scanned/ to classify")
+                    "entity-classify", gate=_gate(False, "error", "trigger loop raised - see scheduler logs")
                 )
-            await self.wait_until("entity-classify", "CLASSIFY_POLL_WAIT")
+                await asyncio.sleep(Config.get("TICK"))
 
     async def entity_scan_trigger(self):
         while True:
-            scan = Scan.fetch(self.session)
-            force = self._consume("entity-scan", "force_run")
-            if scan.limit_reached and not force:
-                log.info(
-                    "Scan limit reached for the day. Pausing trigger until next day."
-                )
-                await self.wait_day_change(Timestamp().date(), flow="entity-scan")
-                continue
-            if entities := Entity.fetch_queued_entities(self.session):
-                self._set_state("entity-scan", phase="running", gate=self._trigger_gate(force))
-                self.inet.wait_for_network()
-                await wait_for_device(self.tl)
-                log.info(f"Total entities queued for scan: {len(entities)}")
-                log.info(
-                    f"Trigerring scan for:\n{entities[0].model_dump_json(indent=4)}"
-                )
-                await self.entity_scan.trigger(parameters={"url": entities[0].url}, force=force)
-                await self.wait_until("entity-scan", "SCAN_WAIT")
-            else:
+            try:
+                scan = Scan.fetch(self.session)
+                force = self._consume("entity-scan", "force_run")
+                if scan.limit_reached and not force:
+                    log.info(
+                        "Scan limit reached for the day. Pausing trigger until next day."
+                    )
+                    await self.wait_day_change(Timestamp().date(), flow="entity-scan")
+                    continue
+                if entities := Entity.fetch_queued_entities(self.session):
+                    self._set_state("entity-scan", phase="running", gate=self._trigger_gate(force))
+                    self.inet.wait_for_network()
+                    await wait_for_device(self.tl)
+                    log.info(f"Total entities queued for scan: {len(entities)}")
+                    log.info(
+                        f"Trigerring scan for:\n{entities[0].model_dump_json(indent=4)}"
+                    )
+                    await self.entity_scan.trigger(parameters={"url": entities[0].url}, force=force)
+                    await self.wait_until("entity-scan", "SCAN_WAIT")
+                else:
+                    self._set_state(
+                        "entity-scan", gate=_gate(False, "no_work", "no queued entities")
+                    )
+                await self.wait_until("entity-scan", "SCAN_POLL_WAIT")
+            except Exception:
+                log.exception("entity-scan: trigger loop raised - recovering after a short wait.")
                 self._set_state(
-                    "entity-scan", gate=_gate(False, "no_work", "no queued entities")
+                    "entity-scan", gate=_gate(False, "error", "trigger loop raised - see scheduler logs")
                 )
-            await self.wait_until("entity-scan", "SCAN_POLL_WAIT")
+                await asyncio.sleep(Config.get("TICK"))
 
     async def entity_scrape_trigger(self):
         while True:
-            scrape = Scrape.fetch(self.session)
-            force = self._consume("entity-scrape", "force_run")
-            if scrape.limit_reached and not force:
-                log.info(
-                    "Scrape limit reached for the day. Pausing trigger until next day."
-                )
-                await self.wait_day_change(Timestamp().date(), flow="entity-scrape")
-                continue
-            backpressure = Config.get("FOLLOW") * Config.get("SCRAPE_RESERVE_FACTOR")
-            count = len(jpegs(SCRAPED_DIR) + jpegs(FOLLOW_QUEUE_DIR))
-            if count < backpressure or force:
-                self._set_state("entity-scrape", phase="running", gate=self._trigger_gate(force))
-                await wait_for_device(self.tl)
-                log.info("Queued entities are requested to scrape.")
-                await self.entity_scrape.trigger(parameters={"force": force}, force=force)
-                await self.ping_telegram()
-                await self.wait_until("entity-scrape", "SCRAPE_WAIT")
-            else:
+            try:
+                scrape = Scrape.fetch(self.session)
+                force = self._consume("entity-scrape", "force_run")
+                if scrape.limit_reached and not force:
+                    log.info(
+                        "Scrape limit reached for the day. Pausing trigger until next day."
+                    )
+                    await self.wait_day_change(Timestamp().date(), flow="entity-scrape")
+                    continue
+                backpressure = Config.get("FOLLOW") * Config.get("SCRAPE_RESERVE_FACTOR")
+                count = len(jpegs(SCRAPED_DIR) + jpegs(FOLLOW_QUEUE_DIR))
+                if count < backpressure or force:
+                    self._set_state("entity-scrape", phase="running", gate=self._trigger_gate(force))
+                    await wait_for_device(self.tl)
+                    log.info("Queued entities are requested to scrape.")
+                    await self.entity_scrape.trigger(parameters={"force": force}, force=force)
+                    await self.ping_telegram()
+                    await self.wait_until("entity-scrape", "SCRAPE_WAIT")
+                else:
+                    self._set_state(
+                        "entity-scrape",
+                        gate=_gate(
+                            False,
+                            "backpressure",
+                            f"scraped+follow_queued = {count} ≥ FOLLOW×"
+                            f"{Config.get('SCRAPE_RESERVE_FACTOR')} = {backpressure}",
+                        ),
+                    )
+                await self.wait_until("entity-scrape", "SCRAPE_BUFFER")
+            except Exception:
+                log.exception("entity-scrape: trigger loop raised - recovering after a short wait.")
                 self._set_state(
-                    "entity-scrape",
-                    gate=_gate(
-                        False,
-                        "backpressure",
-                        f"scraped+follow_queued = {count} ≥ FOLLOW×"
-                        f"{Config.get('SCRAPE_RESERVE_FACTOR')} = {backpressure}",
-                    ),
+                    "entity-scrape", gate=_gate(False, "error", "trigger loop raised - see scheduler logs")
                 )
-            await self.wait_until("entity-scrape", "SCRAPE_BUFFER")
+                await asyncio.sleep(Config.get("TICK"))
 
     async def entity_follow_trigger(self):
         while True:
-            follow = Follow.fetch(self.session)
-            force = self._consume("entity-follow", "force_run")
-            if follow.limit_reached and not force:
-                log.info(
-                    "Follow limit reached for the day. Pausing trigger until next day."
-                )
-                await self.wait_day_change(Timestamp().date(), flow="entity-follow")
-                continue
-            if jpegs(FOLLOW_QUEUE_DIR):
-                self._set_state("entity-follow", phase="running", gate=self._trigger_gate(force))
-                await wait_for_device(self.tl)
-                log.info("Queued entities found to follow.")
-                await self.entity_follow.trigger(parameters={"force": force}, force=force)
-                await self.ping_telegram()
-                await self.wait_until("entity-follow", "FOLLOW_WAIT")
-            else:
+            try:
+                follow = Follow.fetch(self.session)
+                force = self._consume("entity-follow", "force_run")
+                if follow.limit_reached and not force:
+                    log.info(
+                        "Follow limit reached for the day. Pausing trigger until next day."
+                    )
+                    await self.wait_day_change(Timestamp().date(), flow="entity-follow")
+                    continue
+                if jpegs(FOLLOW_QUEUE_DIR):
+                    self._set_state("entity-follow", phase="running", gate=self._trigger_gate(force))
+                    await wait_for_device(self.tl)
+                    log.info("Queued entities found to follow.")
+                    await self.entity_follow.trigger(parameters={"force": force}, force=force)
+                    await self.ping_telegram()
+                    await self.wait_until("entity-follow", "FOLLOW_WAIT")
+                else:
+                    self._set_state(
+                        "entity-follow", gate=_gate(False, "no_work", "nothing in follow_queued/")
+                    )
+                await self.wait_until("entity-follow", "FOLLOW_BUFFER")
+            except Exception:
+                log.exception("entity-follow: trigger loop raised - recovering after a short wait.")
                 self._set_state(
-                    "entity-follow", gate=_gate(False, "no_work", "nothing in follow_queued/")
+                    "entity-follow", gate=_gate(False, "error", "trigger loop raised - see scheduler logs")
                 )
-            await self.wait_until("entity-follow", "FOLLOW_BUFFER")
+                await asyncio.sleep(Config.get("TICK"))
 
     # ------------------------------------------------------------- heartbeat
 
