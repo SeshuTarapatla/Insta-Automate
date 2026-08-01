@@ -18,7 +18,7 @@ from insta_automate.vars import ENTITY_DIR
 async def entity_ingest():
     log = get_run_logger()
     agent = AgentClient()
-    await agent.emit({"flow": "entity_ingest", "kind": "flow.started"})
+    await agent.emit({"flow": "entity-ingest", "kind": "flow.started"})
     tl = await IaTelegram.get_client()
     device = await device_ready(tl)
     entity = None
@@ -45,7 +45,7 @@ async def entity_ingest():
     else:
         log.error("No entities found to ingest.")
     await agent.emit({
-        "flow": "entity_ingest", "kind": "flow.completed",
+        "flow": "entity-ingest", "kind": "flow.completed",
         "counters": {"processed": processed},
     })
 

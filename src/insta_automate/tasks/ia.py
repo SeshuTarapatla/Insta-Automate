@@ -111,7 +111,7 @@ async def add_new_entity(
             log.info("Adding entry to Entity table.")
             entity.update(session)
             await AgentClient().emit({
-                "flow": "entity_ingest", "kind": "entity.added",
+                "flow": "entity-ingest", "kind": "entity.added",
                 "entity": entity.id, "subject": entity.id,
                 "image": f"entities/{entity.id}.jpg",
                 "extra": {"type": entity.type, "access": entity.access, "url": url},
@@ -187,7 +187,7 @@ async def profile_entity_scan(
                 _list, list_element = "following", ui.profile_following
         log.info(f"Opening profile {_list} list.")
         await AgentClient().emit({
-            "flow": "entity_scan", "kind": "scan.started",
+            "flow": "entity-scan", "kind": "scan.started",
             "entity": entity.id, "subject": entity.id,
             "image": f"entities/{entity.id}.jpg",
             "extra": {"list": _list, "f1": profile.f1, "f2": profile.f2},
@@ -228,7 +228,7 @@ async def profile_entity_scan(
                     f"[{added}/{scanned}] @{current} | Exported to: {jpeg.relative_to(IA_DIR)}"
                 )
                 await AgentClient().emit({
-                    "flow": "entity_scan", "kind": "scan.item",
+                    "flow": "entity-scan", "kind": "scan.item",
                     "entity": entity.id, "subject": current,
                     "image": str(jpeg.relative_to(IA_DIR)),
                     "counters": {"added": added, "scanned": scanned},
@@ -260,7 +260,7 @@ async def profile_entity_scan(
         f"Scan complete. Scanned total: {scanned} | New entities: {added} | Total time taken: {duration} "
     )
     await AgentClient().emit({
-        "flow": "entity_scan", "kind": "scan.completed",
+        "flow": "entity-scan", "kind": "scan.completed",
         "entity": entity.id, "subject": entity.id,
         "counters": {"scanned": scanned, "added": added},
         "extra": {"duration_s": duration.total_seconds()},
@@ -304,7 +304,7 @@ async def post_entity_scan(
     likes_element.click(offset=(0, 0.5))
     ui.likes_drag_bar.drag_to(0, 0)
     await AgentClient().emit({
-        "flow": "entity_scan", "kind": "scan.started",
+        "flow": "entity-scan", "kind": "scan.started",
         "entity": entity.id, "subject": entity.id,
         "image": f"entities/{entity.id}.jpg",
         "extra": {"list": "likes"},
@@ -342,7 +342,7 @@ async def post_entity_scan(
                     f"[{added}/{scanned}] @{current} | Exported to: {jpeg.relative_to(IA_DIR)}"
                 )
                 await AgentClient().emit({
-                    "flow": "entity_scan", "kind": "scan.item",
+                    "flow": "entity-scan", "kind": "scan.item",
                     "entity": entity.id, "subject": current,
                     "image": str(jpeg.relative_to(IA_DIR)),
                     "counters": {"added": added, "scanned": scanned},
@@ -363,7 +363,7 @@ async def post_entity_scan(
         f"Scan complete. Scanned total: {scanned} | New entities: {added} | Total time taken: {duration} "
     )
     await AgentClient().emit({
-        "flow": "entity_scan", "kind": "scan.completed",
+        "flow": "entity-scan", "kind": "scan.completed",
         "entity": entity.id, "subject": entity.id,
         "counters": {"scanned": scanned, "added": added},
         "extra": {"duration_s": duration.total_seconds()},
@@ -402,7 +402,7 @@ async def profile_scrape(
 
     rel_img = img.relative_to(IA_DIR)
     await AgentClient().emit({
-        "flow": "entity_scrape", "kind": "scrape.started",
+        "flow": "entity-scrape", "kind": "scrape.started",
         "entity": id, "subject": id, "image": str(rel_img),
     })
 
@@ -416,21 +416,21 @@ async def profile_scrape(
             f"@{id} access is found out to be: {EntityAccess.PUBLIC.upper()}. Skipping scrape."
         )
         await AgentClient().emit({
-            "flow": "entity_scrape", "kind": "scrape.skipped",
+            "flow": "entity-scrape", "kind": "scrape.skipped",
             "entity": id, "subject": id, "image": str(rel_img), "reason": "PUBLIC",
         })
         return False
     elif user.p == 0 and (year := device.determine_year_joined()) is not None and year < 5:
         log.error(f"@{id} has zero posts. Skipping scrape.")
         await AgentClient().emit({
-            "flow": "entity_scrape", "kind": "scrape.skipped",
+            "flow": "entity-scrape", "kind": "scrape.skipped",
             "entity": id, "subject": id, "image": str(rel_img), "reason": "NO_POSTS",
         })
         return False
     elif (_min := min(user.f1, user.f2)) < Limit.get("FMIN"):
         log.error(f"@{id} has {_min} < {Limit.get('FMIN')} followers. Skipping scrape.")
         await AgentClient().emit({
-            "flow": "entity_scrape", "kind": "scrape.skipped",
+            "flow": "entity-scrape", "kind": "scrape.skipped",
             "entity": id, "subject": id, "image": str(rel_img),
             "reason": f"f={_min} < FMIN={Limit.get('FMIN')}",
         })
@@ -440,7 +440,7 @@ async def profile_scrape(
             f"@{id} has {user.f1} > {Limit.get('FMAX')} followers. Skipping scrape."
         )
         await AgentClient().emit({
-            "flow": "entity_scrape", "kind": "scrape.skipped",
+            "flow": "entity-scrape", "kind": "scrape.skipped",
             "entity": id, "subject": id, "image": str(rel_img),
             "reason": f"f={user.f1} > FMAX={Limit.get('FMAX')}",
         })
@@ -473,7 +473,7 @@ async def profile_scrape(
     rel_output = output.relative_to(IA_DIR)
     log.info(f"Scrape exported to {rel_output}")
     await AgentClient().emit({
-        "flow": "entity_scrape", "kind": "scrape.done",
+        "flow": "entity-scrape", "kind": "scrape.done",
         "entity": id, "subject": id, "image": str(rel_output),
         "counters": {"posts": user.p, "followers": user.f1, "following": user.f2},
     })
@@ -516,7 +516,7 @@ async def profile_follow(
 
     rel_img = img.relative_to(IA_DIR)
     await AgentClient().emit({
-        "flow": "entity_follow", "kind": "follow.attempt",
+        "flow": "entity-follow", "kind": "follow.attempt",
         "entity": id, "subject": id, "image": str(rel_img),
     })
 
@@ -525,7 +525,7 @@ async def profile_follow(
             f"@{id} access is found out to be: {EntityAccess.PUBLIC.upper()}. Skipping Follow."
         )
         await AgentClient().emit({
-            "flow": "entity_follow", "kind": "follow.result",
+            "flow": "entity-follow", "kind": "follow.result",
             "entity": id, "subject": id, "image": str(rel_img),
             "verdict": "FAILED", "reason": "PUBLIC",
         })
@@ -536,7 +536,7 @@ async def profile_follow(
         log.error(msg)
         await tl.bot.notify(msg, file=img)
         await AgentClient().emit({
-            "flow": "entity_follow", "kind": "follow.result",
+            "flow": "entity-follow", "kind": "follow.result",
             "entity": id, "subject": id, "image": str(rel_img), "verdict": "FOLLOWED_BY",
         })
         return False
@@ -544,7 +544,7 @@ async def profile_follow(
     if ui.wants_to_follow.exists:
         log.error(f"@{id} already wants to follow you.")
         await AgentClient().emit({
-            "flow": "entity_follow", "kind": "follow.result",
+            "flow": "entity-follow", "kind": "follow.result",
             "entity": id, "subject": id, "image": str(rel_img), "verdict": "WANTS_TO_FOLLOW",
         })
         return False
@@ -573,7 +573,7 @@ async def profile_follow(
         verdict, reason = "FAILED", "follow button not found"
 
     await AgentClient().emit({
-        "flow": "entity_follow", "kind": "follow.result",
+        "flow": "entity-follow", "kind": "follow.result",
         "entity": id, "subject": id, "image": str(rel_img),
         "verdict": verdict, "reason": reason,
     })

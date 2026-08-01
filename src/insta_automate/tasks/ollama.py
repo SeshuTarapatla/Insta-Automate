@@ -52,7 +52,7 @@ def remove_public(session: Session | None = None) -> tuple[int, int, int]:
         session.merge(scanned)
         session.commit()
         emit_sync({
-            "flow": "entity_classify", "kind": "classify.access",
+            "flow": "entity-classify", "kind": "classify.access",
             "entity": entity.parent.name, "subject": scanned.id,
             "image": str(entity.relative_to(IA_DIR)), "verdict": scanned.access.upper(),
         })
@@ -95,7 +95,7 @@ def gender_classify(session: Session | None = None) -> tuple[int, int, int]:
         session.merge(scanned)
         session.commit()
         emit_sync({
-            "flow": "entity_classify", "kind": "classify.gender",
+            "flow": "entity-classify", "kind": "classify.gender",
             "entity": entity.parent.name, "subject": scanned.id,
             "image": str(entity.relative_to(IA_DIR)), "verdict": scanned.gender.upper(),
         })

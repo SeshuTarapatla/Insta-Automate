@@ -24,7 +24,7 @@ from insta_automate.tasks.telegram import notify_scan_limit_reached, notify_prof
 async def entity_scan(url: str, list: ScanList = ScanList.AUTO, device: IaDevice | None = None):
     log = get_run_logger()
     agent = AgentClient()
-    await agent.emit({"flow": "entity_scan", "kind": "flow.started", "subject": url})
+    await agent.emit({"flow": "entity-scan", "kind": "flow.started", "subject": url})
     session = IaSession()
     status = None
     scan = Scan.fetch(session)
@@ -39,7 +39,7 @@ async def entity_scan(url: str, list: ScanList = ScanList.AUTO, device: IaDevice
     if entity.status == EntityStatus.COMPLETED:
         log.error("This entity has been already scanned.")
         await agent.emit({
-            "flow": "entity_scan", "kind": "flow.completed",
+            "flow": "entity-scan", "kind": "flow.completed",
             "entity": entity.id, "subject": url,
             "reason": "already scanned",
         })
@@ -62,7 +62,7 @@ async def entity_scan(url: str, list: ScanList = ScanList.AUTO, device: IaDevice
     if limit := scan.limit_reached:
         await notify_scan_limit_reached(*limit)
     await agent.emit({
-        "flow": "entity_scan", "kind": "flow.completed",
+        "flow": "entity-scan", "kind": "flow.completed",
         "entity": entity.id if entity else None, "subject": url,
         "counters": {"status": bool(status)},
     })

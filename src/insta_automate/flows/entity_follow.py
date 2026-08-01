@@ -28,7 +28,7 @@ from insta_automate.vars import FOLLOW_QUEUE_DIR
 async def entity_follow(entity: str | None = None, n: int | None = None, force: bool = False):
     log = get_run_logger()
     agent = AgentClient()
-    await agent.emit({"flow": "entity_follow", "kind": "flow.started", "entity": entity})
+    await agent.emit({"flow": "entity-follow", "kind": "flow.started", "entity": entity})
     n = n if n is not None else Limit.get("FOLLOW_BATCH")
     followed, processed, follow_queue = 0, 0, FOLLOW_QUEUE.copy()
     if entity:
@@ -84,13 +84,13 @@ async def entity_follow(entity: str | None = None, n: int | None = None, force: 
         await db_backup()
         rm_empty_subdirs()
         await agent.emit({
-            "flow": "entity_follow", "kind": "flow.completed", "entity": entity,
+            "flow": "entity-follow", "kind": "flow.completed", "entity": entity,
             "counters": {"processed": processed, "followed": followed},
         })
     else:
         log.error("No entities found to follow")
         await agent.emit({
-            "flow": "entity_follow", "kind": "flow.completed", "entity": entity,
+            "flow": "entity-follow", "kind": "flow.completed", "entity": entity,
             "reason": "no work",
         })
 

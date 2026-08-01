@@ -29,7 +29,7 @@ from insta_automate.vars import SCRAPE_QUEUE_DIR, SCRAPED_DIR
 async def entity_scrape(entity: str | None = None, n: int | None = None, force: bool = False):
     log = get_run_logger()
     agent = AgentClient()
-    await agent.emit({"flow": "entity_scrape", "kind": "flow.started", "entity": entity})
+    await agent.emit({"flow": "entity-scrape", "kind": "flow.started", "entity": entity})
     n = n if n is not None else Limit.get("SCRAPE_BATCH")
     scraped, processed, scrape_queue = 0, 0, SCRAPE_QUEUE.copy()
     if entity:
@@ -86,13 +86,13 @@ async def entity_scrape(entity: str | None = None, n: int | None = None, force: 
         await db_backup()
         rm_empty_subdirs()
         await agent.emit({
-            "flow": "entity_scrape", "kind": "flow.completed", "entity": entity,
+            "flow": "entity-scrape", "kind": "flow.completed", "entity": entity,
             "counters": {"processed": processed, "scraped": scraped},
         })
     else:
         log.error("No entities found to scrape")
         await agent.emit({
-            "flow": "entity_scrape", "kind": "flow.completed", "entity": entity,
+            "flow": "entity-scrape", "kind": "flow.completed", "entity": entity,
             "reason": "no work",
         })
 
