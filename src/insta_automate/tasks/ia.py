@@ -410,7 +410,20 @@ async def profile_scrape(
         "entity": id, "subject": id, "image": str(rel_img),
     })
 
-    if not ui.profile_tabs_container.wait(timeout=5):
+    # D68, corrected same-session from D64: checking only
+    # `profile_tabs_container` treated every *legitimate PRIVATE* profile as
+    # "unavailable" too, since a private profile's page never has tabs
+    # either (it shows a lock/banner instead) - PRIVATE is scrape's own
+    # dominant, expected case (`elif user.access == PUBLIC: skip` below
+    # exists precisely because scrape only wants PRIVATE), so this broke
+    # real scraping outright, not just guarded against a rare edge case.
+    # `_profile_entity_access` already implements the full three-way check
+    # (PRIVATE banner / PUBLIC tabs / neither == genuinely unavailable) -
+    # reused here instead of re-deriving a partial version of the same
+    # logic, and its result is carried forward so the access check below
+    # doesn't redundantly re-run the same wait a second time.
+    access = device._profile_entity_access(timeout=15)
+    if access is None:
         # The app bar can still show a username for a disabled/unavailable
         # profile (that's all `profile_id.wait` above checks), but none of
         # `User.from_ui`'s post/follower/following elements exist on that
@@ -425,8 +438,7 @@ async def profile_scrape(
         return False
 
     user = User.from_ui(ui, session)
-    if access := device._profile_entity_access():
-        user.access = access
+    user.access = access
     user.update(session)
 
     if user.access == EntityAccess.PUBLIC:
