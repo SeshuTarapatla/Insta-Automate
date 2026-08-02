@@ -486,6 +486,23 @@ class Prefect:
 
         @self.tl.on(NewMessage(chats=self.tl.entity_channel))
         async def entity_ingest_message_trigger(event: NewMessage.Event):
+            # Unlike every other trigger, this one fires from Telethon's own
+            # event dispatch, not from entity_ingest_time_trigger()'s loop -
+            # so it never went through that loop's `_set_state(...,
+            # phase="running", ...)` call. The flow itself ran correctly
+            # (that loop's own polling would eventually pick up the same
+            # work anyway), but the scheduler snapshot never showed
+            # entity-ingest as "running" for a message-triggered run,
+            # invisible to anything reading phase (D66) - found by the
+            # control center's Live screen never auto-following an
+            # ingest-by-channel-post trigger, only the polling-triggered
+            # ones.
+            _current_flow.set("entity-ingest")
+            self._set_state(
+                "entity-ingest", phase="running",
+                gate=_gate(True, "message", "triggered by a new channel post"),
+            )
             await self.entity_ingest_trigger()
+            self._set_state("entity-ingest", phase="idle")
 
         await handle_await(self.tl.run_until_disconnected())
