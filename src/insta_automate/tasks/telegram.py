@@ -38,4 +38,6 @@ async def notify_profile_unfollow(entity: Entity):
         f"Scan complete. You can now unfollow **[@{entity.id}]({entity.url})**",
         image=image,
         tags=("scan", "unfollow"),
+        url=entity.url,
+        always_telegram=True,
     )

@@ -1,4 +1,5 @@
 import asyncio
+import re
 from pathlib import Path
 
 from my_modules.datetime_utils import Timestamp
@@ -102,6 +103,8 @@ async def add_new_entity(
                 image=img,
                 tags=("entity",),
                 tl=tl,
+                url=url,
+                always_telegram=True,
             )
         else:
             log.info(f"Entity type is determined to be: {entity.type.upper()}")
@@ -533,9 +536,19 @@ async def profile_follow(
         return False
 
     if ui.followed_by.exists:
-        msg = f"**[@{entity.id}]({entity.url})** is {ui.followed_by.get_text()}"
+        # "Followed by test_user_123" -> "Followed by @test_user_123" - purely
+        # cosmetic, to match the "@entity" styling of the link just before it
+        # (the followed-by name itself is never a link, just visually
+        # consistent with one). Only the first name gets the "@" on Instagram's
+        # own "Followed by X and 3 others" multi-name phrasing - acceptable
+        # since this is display polish, not a second link target.
+        followed_text = re.sub(r"^(Followed by )(\S)", r"\1@\2", ui.followed_by.get_text())
+        msg = f"**[@{entity.id}]({entity.url})** is {followed_text}"
         log.error(msg)
-        await notify(msg, image=img, level="warn", tags=("follow",), tl=tl)
+        await notify(
+            msg, image=img, level="warn", tags=("follow",), tl=tl,
+            url=entity.url, always_telegram=True,
+        )
         await AgentClient().emit({
             "flow": "entity-follow", "kind": "follow.result",
             "entity": id, "subject": id, "image": str(rel_img), "verdict": "FOLLOWED_BY",

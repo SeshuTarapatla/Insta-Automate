@@ -70,11 +70,14 @@ class AgentClient:
         dedupe: str | None = None,
         level: str = "info",
         tags: tuple[str, ...] = (),
+        url: str | None = None,
     ) -> bool:
         """POST to the agent's notify endpoint (ARCHITECTURE §6). Returns
         `delivered` - False on any failure or if the notify endpoint (CP 6.1)
         doesn't exist yet, which is the caller's signal to fall back to
-        Telegram."""
+        Telegram. `url`, when set, is the notification's tap target (a
+        profile's Instagram URL) - purely descriptive to the agent, which
+        just stores and forwards it to whichever client renders it."""
         try:
             response = await self._client.post(
                 self._url("/api/notify"),
@@ -85,6 +88,7 @@ class AgentClient:
                     "dedupe": dedupe,
                     "level": level,
                     "tags": list(tags),
+                    "url": url,
                 },
                 timeout=2.0,
             )
