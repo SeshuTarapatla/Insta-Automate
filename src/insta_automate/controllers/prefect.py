@@ -1,4 +1,6 @@
 import asyncio
+import contextvars
+import logging
 from datetime import date, datetime, timedelta
 from inspect import isawaitable
 from typing import Any, cast
@@ -33,6 +35,27 @@ from insta_automate.vars import (
 )
 
 log = get_logger(__name__)
+
+# Tags every log record emitted from within a trigger loop's own asyncio task
+# with the flow it belongs to, so the agent's log tailer (flowruns.py) can
+# route scheduler-pod lines to the right flow's log pane instead of
+# broadcasting every line to every active run. Set once at the top of each
+# `entity_*_trigger` loop below; each asyncio task gets its own copy of the
+# contextvar, so `Deployment.trigger()`/`log_status()` calls made from inside
+# a loop inherit the right tag with no changes needed there. Lines with no
+# flow set (heartbeat_loop, keep_telegram_alive, startup) are left untagged.
+_current_flow: contextvars.ContextVar[str | None] = contextvars.ContextVar("current_flow", default=None)
+
+
+class _FlowTagFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        flow = _current_flow.get()
+        if flow:
+            record.msg = f"[{flow}] {record.msg}"
+        return True
+
+
+log.addFilter(_FlowTagFilter())
 
 
 def _gate(ok: bool, reason: str | None = None, detail: str | None = None) -> dict[str, Any]:
@@ -239,6 +262,7 @@ class Prefect:
             self.entity_ingest_queued = False
 
     async def entity_ingest_time_trigger(self):
+        _current_flow.set("entity-ingest")
         while True:
             try:
                 force = self._consume("entity-ingest", "force_run")
@@ -258,6 +282,7 @@ class Prefect:
                 await asyncio.sleep(Config.get("TICK"))
 
     async def entity_classify_trigger(self):
+        _current_flow.set("entity-classify")
         while True:
             try:
                 force = self._consume("entity-classify", "force_run")
@@ -279,6 +304,7 @@ class Prefect:
                 await asyncio.sleep(Config.get("TICK"))
 
     async def entity_scan_trigger(self):
+        _current_flow.set("entity-scan")
         while True:
             try:
                 scan = Scan.fetch(self.session)
@@ -312,6 +338,7 @@ class Prefect:
                 await asyncio.sleep(Config.get("TICK"))
 
     async def entity_scrape_trigger(self):
+        _current_flow.set("entity-scrape")
         while True:
             try:
                 scrape = Scrape.fetch(self.session)
@@ -350,6 +377,7 @@ class Prefect:
                 await asyncio.sleep(Config.get("TICK"))
 
     async def entity_follow_trigger(self):
+        _current_flow.set("entity-follow")
         while True:
             try:
                 follow = Follow.fetch(self.session)

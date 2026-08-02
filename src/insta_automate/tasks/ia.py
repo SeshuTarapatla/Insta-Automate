@@ -410,6 +410,20 @@ async def profile_scrape(
         "entity": id, "subject": id, "image": str(rel_img),
     })
 
+    if not ui.profile_tabs_container.wait(timeout=5):
+        # The app bar can still show a username for a disabled/unavailable
+        # profile (that's all `profile_id.wait` above checks), but none of
+        # `User.from_ui`'s post/follower/following elements exist on that
+        # page - previously an uncaught crash there, retried 3x by @ia_task,
+        # then a hard failure that aborted every other queued profile in
+        # this run too.
+        log.error(f"@{id}: profile page loaded but has no content (disabled/unavailable?)")
+        await AgentClient().emit({
+            "flow": "entity-scrape", "kind": "scrape.skipped",
+            "entity": id, "subject": id, "image": str(rel_img), "reason": "UNAVAILABLE",
+        })
+        return False
+
     user = User.from_ui(ui, session)
     if access := device._profile_entity_access():
         user.access = access
