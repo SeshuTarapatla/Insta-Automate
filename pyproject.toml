@@ -32,9 +32,24 @@ requires = ["uv_build>=0.11.2,<0.12.0"]
 build-backend = "uv_build"
 
 [tool.uv.sources]
-my-modules = { git = "https://github.com/SeshuTarapatla/my-modules.git" }
-prefect-k3s = { git = "https://github.com/SeshuTarapatla/Prefect-K3s.git" }
-tg-auth = { git = "https://github.com/SeshuTarapatla/TG-Auth.git" }
+# Pinned to match wsl-bridge's own pin (D65) — wsl-bridge is a direct
+# dependency here too (see below), and uv's resolver treats an unpinned git
+# URL and a @rev-pinned one for the same package as genuinely conflicting
+# sources, not "compatible until proven otherwise". Found live, CP 7.1
+# checkpoint testing: `ia build` failed outright with exactly that conflict
+# the moment this was first actually run since D65 pinned wsl-bridge's side.
+my-modules = { git = "https://github.com/SeshuTarapatla/my-modules.git", rev = "94b308a" }
+# Pinned to feat/control-center rather than left on main's default HEAD:
+# that's where the matching my-modules pin above actually lives (D71's fix
+# had to land in Prefect-K3S too, its own my-modules reference was
+# unpinned and conflicted the same way). Same "point a feature branch at a
+# feature branch for testing" pattern already used for GIT_BRANCH — revert
+# to unpinned (main) once Prefect-K3S's branch merges.
+prefect-k3s = { git = "https://github.com/SeshuTarapatla/Prefect-K3s.git", branch = "feat/control-center" }
+# Same reason and same revert plan as prefect-k3s above — tg-auth's own
+# my-modules reference was unpinned too, found only by tracing the actual
+# conflict (it isn't in CLAUDE.md's repo table at all).
+tg-auth = { git = "https://github.com/SeshuTarapatla/TG-Auth.git", branch = "feat/control-center" }
 wsl-bridge = { git = "https://github.com/SeshuTarapatla/wsl-bridge.git" }
 
 [dependency-groups]

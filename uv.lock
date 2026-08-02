@@ -872,10 +872,10 @@ requires-dist = [
     { name = "async-typer", specifier = ">=0.1.10" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "humanize", specifier = ">=4.15.0" },
-    { name = "my-modules", git = "https://github.com/SeshuTarapatla/my-modules.git" },
+    { name = "my-modules", git = "https://github.com/SeshuTarapatla/my-modules.git?rev=94b308a" },
     { name = "ollama", specifier = ">=0.6.1" },
     { name = "pillow", specifier = ">=12.2.0" },
-    { name = "prefect-k3s", git = "https://github.com/SeshuTarapatla/Prefect-K3s.git" },
+    { name = "prefect-k3s", git = "https://github.com/SeshuTarapatla/Prefect-K3s.git?branch=feat%2Fcontrol-center" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "send2trash", specifier = ">=2.1.0" },
     { name = "sqlmodel", specifier = ">=0.0.38" },
@@ -888,7 +888,7 @@ requires-dist = [
 dev = [
     { name = "ipykernel", specifier = ">=7.2.0" },
     { name = "pandas", specifier = ">=3.0.3" },
-    { name = "tg-auth", git = "https://github.com/SeshuTarapatla/TG-Auth.git" },
+    { name = "tg-auth", git = "https://github.com/SeshuTarapatla/TG-Auth.git?branch=feat%2Fcontrol-center" },
 ]
 
 [[package]]
@@ -1334,7 +1334,7 @@ wheels = [
 [[package]]
 name = "my-modules"
 version = "0.1.0"
-source = { git = "https://github.com/SeshuTarapatla/my-modules.git#f06b6874c857b863c88cc52fa9fb4fe2e54c206f" }
+source = { git = "https://github.com/SeshuTarapatla/my-modules.git?rev=94b308a#94b308a5a31aea215fe3404bffb21922864c0fdc" }
 dependencies = [
     { name = "adbutils" },
     { name = "kubernetes" },
@@ -1794,7 +1794,7 @@ wheels = [
 [[package]]
 name = "prefect-k3s"
 version = "0.1.0"
-source = { git = "https://github.com/SeshuTarapatla/Prefect-K3s.git#20d7d8015d972108b391c31465a46acaa92e2d6f" }
+source = { git = "https://github.com/SeshuTarapatla/Prefect-K3s.git?branch=feat%2Fcontrol-center#23d07d5065d0775bf10da114f7dc8682f3629718" }
 dependencies = [
     { name = "my-modules" },
     { name = "prefect" },
@@ -2770,7 +2770,7 @@ wheels = [
 [[package]]
 name = "tg-auth"
 version = "0.1.0"
-source = { git = "https://github.com/SeshuTarapatla/TG-Auth.git#909744ec4ee0c5f484e24b8c85d89243efe60a8e" }
+source = { git = "https://github.com/SeshuTarapatla/TG-Auth.git?branch=feat%2Fcontrol-center#e6c5312ae2f6e7390102c20d92088460cd8c60a5" }
 dependencies = [
     { name = "async-typer" },
     { name = "kubernetes" },
@@ -3067,7 +3067,7 @@ wheels = [
 [[package]]
 name = "wsl-bridge"
 version = "0.1.0"
-source = { git = "https://github.com/SeshuTarapatla/wsl-bridge.git#4d176fa9bd5c4b7f589a7f5e1dd45a2e69401ba3" }
+source = { git = "https://github.com/SeshuTarapatla/wsl-bridge.git#3c11741957ca0cd26521cd6dd272a4e125aae97c" }
 dependencies = [
     { name = "fastapi" },
     { name = "httpx" },
