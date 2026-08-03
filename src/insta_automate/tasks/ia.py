@@ -393,6 +393,17 @@ async def profile_scrape(
     await ensure_network(device)
     entity = Entity.from_id(id)
 
+    # Emitted the instant the attempt is triggered, not once the profile page
+    # actually loads - the display's "attempting" card needs to appear right
+    # away (matching the log line's own "Scrape triggered"), and a profile
+    # that turns out not-found below still needs a `started` for its
+    # `scrape.skipped` to resolve against instead of never having appeared.
+    rel_img = img.relative_to(IA_DIR)
+    await AgentClient().emit({
+        "flow": "entity-scrape", "kind": "scrape.started",
+        "entity": id, "subject": id, "image": str(rel_img),
+    })
+
     while True:
         log.info(f"Scraping profile: @{id}")
         device.open_entity(entity)
@@ -402,13 +413,11 @@ async def profile_scrape(
             await ensure_network(device)
         else:
             log.error(f"@{id}: Profile not found")
+            await AgentClient().emit({
+                "flow": "entity-scrape", "kind": "scrape.skipped",
+                "entity": id, "subject": id, "image": str(rel_img), "reason": "NOT_FOUND",
+            })
             return False
-
-    rel_img = img.relative_to(IA_DIR)
-    await AgentClient().emit({
-        "flow": "entity-scrape", "kind": "scrape.started",
-        "entity": id, "subject": id, "image": str(rel_img),
-    })
 
     # D68, corrected same-session from D64: checking only
     # `profile_tabs_container` treated every *legitimate PRIVATE* profile as
@@ -533,6 +542,16 @@ async def profile_follow(
     await ensure_network(device)
     entity = Entity.from_id(id)
 
+    # Same reasoning as `profile_scrape`'s emit above: fires the instant the
+    # attempt is triggered, not once the profile page actually loads, so a
+    # not-found profile still gets a `follow.attempt` for its `follow.result`
+    # to resolve against instead of leaving no trace at all.
+    rel_img = img.relative_to(IA_DIR)
+    await AgentClient().emit({
+        "flow": "entity-follow", "kind": "follow.attempt",
+        "entity": id, "subject": id, "image": str(rel_img),
+    })
+
     while True:
         log.info(f"Following profile: @{id}")
         device.open_entity(entity)
@@ -542,13 +561,12 @@ async def profile_follow(
             await ensure_network(device)
         else:
             log.error(f"@{id}: Profile not found")
+            await AgentClient().emit({
+                "flow": "entity-follow", "kind": "follow.result",
+                "entity": id, "subject": id, "image": str(rel_img),
+                "verdict": "FAILED", "reason": "NOT_FOUND",
+            })
             return False
-
-    rel_img = img.relative_to(IA_DIR)
-    await AgentClient().emit({
-        "flow": "entity-follow", "kind": "follow.attempt",
-        "entity": id, "subject": id, "image": str(rel_img),
-    })
 
     if device._profile_entity_access() == EntityAccess.PUBLIC:
         log.error(
