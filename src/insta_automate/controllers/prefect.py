@@ -65,22 +65,37 @@ def _gate(ok: bool, reason: str | None = None, detail: str | None = None) -> dic
     return {"ok": ok, "reason": reason, "detail": detail}
 
 
-def _scan_reserve_gate(subject: Entity) -> tuple[bool, int, int]:
-    """Whether `subject` (the next queued entity) is subject to the backlog
-    gate, and its current count/target either way. Only a public profile
-    keeps feeding scanned/gender_invalid/gender_valid/scrape_queued
-    indefinitely - a private profile can't be scanned for followers/
-    following at all, and a REEL/POST's own likers list is a one-shot scan,
-    not an ongoing backlog contributor - so neither should ever wait behind
-    it."""
-    gated = subject.type == EntityType.PROFILE and subject.access == EntityAccess.PUBLIC
+def _scan_reserve_gate(
+    entities: list[Entity], force: bool
+) -> tuple[Entity | None, int | None, int]:
+    """Picks the first entity in `entities` (already priority-ordered by
+    `Entity.entity_priority_order()`) that the backlog reserve doesn't block,
+    so a public profile stuck over the cap can never hold up a private
+    profile or REEL/POST queued behind it - `entity_priority_order()` sorts
+    by access then type, which does *not* guarantee a never-gated entity
+    sorts ahead of a gated one (a public REEL sorts *behind* a public
+    PROFILE, same access tier), so checking only `entities[0]` would have
+    let one stuck public profile block everything behind it forever. Only a
+    public profile keeps feeding scanned/gender_invalid/gender_valid/
+    scrape_queued indefinitely - a private profile can't be scanned for
+    followers/following at all, and a REEL/POST's own likers list is a
+    one-shot scan, not an ongoing backlog contributor - so anything else is
+    picked immediately, before the (whole-library, not per-entity) count is
+    even computed. Returns `(None, count, target)` if every queued entity is
+    a gated public profile and the backlog is still over target."""
     target = Config.get("SCAN_RESERVE_TARGET")
-    count = (
-        len(jpegs(SCANNED_DIR) + jpegs(GENDER_INVALID_DIR) + jpegs(GENDER_VALID_DIR) + jpegs(SCRAPE_QUEUE_DIR))
-        if gated
-        else 0
-    )
-    return gated, count, target
+    count = None
+    for candidate in entities:
+        gated = candidate.type == EntityType.PROFILE and candidate.access == EntityAccess.PUBLIC
+        if not gated or force:
+            return candidate, count, target
+        if count is None:
+            count = len(
+                jpegs(SCANNED_DIR) + jpegs(GENDER_INVALID_DIR) + jpegs(GENDER_VALID_DIR) + jpegs(SCRAPE_QUEUE_DIR)
+            )
+        if count < target:
+            return candidate, count, target
+    return None, count, target
 
 
 class Deployment:
@@ -346,9 +361,8 @@ class Prefect:
                     await self.wait_day_change(Timestamp().date(), flow="entity-scan")
                     continue
                 if entities := Entity.fetch_queued_entities(self.session):
-                    subject = entities[0]
-                    gated, count, target = _scan_reserve_gate(subject)
-                    if not gated or count < target or force:
+                    subject, count, target = _scan_reserve_gate(entities, force)
+                    if subject is not None:
                         self._set_state("entity-scan", phase="running", gate=self._trigger_gate(force))
                         self.inet.wait_for_network()
                         await wait_for_device(self.tl)
@@ -369,7 +383,7 @@ class Prefect:
                                 False,
                                 "backpressure",
                                 f"scanned+gender_invalid+gender_valid+scrape_queued = {count} ≥ "
-                                f"SCAN_RESERVE_TARGET = {target} (next queued entity is a public profile)",
+                                f"SCAN_RESERVE_TARGET = {target} (every queued entity is a public profile)",
                             ),
                         )
                 else:
