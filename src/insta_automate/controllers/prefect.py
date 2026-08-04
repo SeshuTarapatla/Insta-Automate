@@ -582,5 +582,14 @@ class Prefect:
             )
             await self.entity_ingest_trigger()
             self._set_state("entity-ingest", phase="idle")
+            # This path never touches `gate`, so the last thing anyone sees
+            # is the "message" gate set above - accurate while running, but
+            # stale for however long is left of entity_ingest_time_trigger()'s
+            # own independent INGEST_POLL_WAIT before it happens to loop
+            # back around and recompute a real one. Waking that loop now
+            # (the same command "Trigger now" uses) makes it reassess
+            # `entities_exist` immediately instead of leaving the stale gate
+            # sitting there for up to 10 minutes.
+            self._commands.setdefault("entity-ingest", []).append("skip_wait")
 
         await handle_await(self.tl.run_until_disconnected())
