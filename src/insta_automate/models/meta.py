@@ -81,6 +81,7 @@ class Config:
         "TICK": 5,
         # Gates
         "SCRAPE_RESERVE_FACTOR": 3,
+        "SCAN_RESERVE_TARGET": 1000,
         "SCAN_LIST": "auto",
         # Control-center wiring
         "IA_AGENT_URL": "http://172.19.16.1:8787",

@@ -22,7 +22,7 @@ from insta_automate.controllers.postgres import IaSession
 from insta_automate.controllers.telegram import IaTelegram
 from insta_automate.models.entity import Entity
 from insta_automate.models.follow import Follow
-from insta_automate.models.meta import Config
+from insta_automate.models.meta import Config, EntityAccess, EntityType
 from insta_automate.models.scan import Scan
 from insta_automate.models.scrape import Scrape
 from insta_automate.tasks.device import wait_for_device
@@ -30,7 +30,10 @@ from insta_automate.utils import jpegs
 from insta_automate.vars import (
     CONFIG,
     FOLLOW_QUEUE_DIR,
+    GENDER_INVALID_DIR,
+    GENDER_VALID_DIR,
     SCANNED_DIR,
+    SCRAPE_QUEUE_DIR,
     SCRAPED_DIR,
 )
 
@@ -60,6 +63,24 @@ log.addFilter(_FlowTagFilter())
 
 def _gate(ok: bool, reason: str | None = None, detail: str | None = None) -> dict[str, Any]:
     return {"ok": ok, "reason": reason, "detail": detail}
+
+
+def _scan_reserve_gate(subject: Entity) -> tuple[bool, int, int]:
+    """Whether `subject` (the next queued entity) is subject to the backlog
+    gate, and its current count/target either way. Only a public profile
+    keeps feeding scanned/gender_invalid/gender_valid/scrape_queued
+    indefinitely - a private profile can't be scanned for followers/
+    following at all, and a REEL/POST's own likers list is a one-shot scan,
+    not an ongoing backlog contributor - so neither should ever wait behind
+    it."""
+    gated = subject.type == EntityType.PROFILE and subject.access == EntityAccess.PUBLIC
+    target = Config.get("SCAN_RESERVE_TARGET")
+    count = (
+        len(jpegs(SCANNED_DIR) + jpegs(GENDER_INVALID_DIR) + jpegs(GENDER_VALID_DIR) + jpegs(SCRAPE_QUEUE_DIR))
+        if gated
+        else 0
+    )
+    return gated, count, target
 
 
 class Deployment:
@@ -325,19 +346,32 @@ class Prefect:
                     await self.wait_day_change(Timestamp().date(), flow="entity-scan")
                     continue
                 if entities := Entity.fetch_queued_entities(self.session):
-                    self._set_state("entity-scan", phase="running", gate=self._trigger_gate(force))
-                    self.inet.wait_for_network()
-                    await wait_for_device(self.tl)
-                    log.info(f"Total entities queued for scan: {len(entities)}")
-                    log.info(
-                        f"Trigerring scan for:\n{entities[0].model_dump_json(indent=4)}"
-                    )
-                    await self.entity_scan.trigger(parameters={"url": entities[0].url}, force=force)
-                    self._set_state(
-                        "entity-scan",
-                        gate=_gate(True, "cooldown", f"ran — next run allowed in up to {Config.get('SCAN_WAIT')}s"),
-                    )
-                    await self.wait_until("entity-scan", "SCAN_WAIT")
+                    subject = entities[0]
+                    gated, count, target = _scan_reserve_gate(subject)
+                    if not gated or count < target or force:
+                        self._set_state("entity-scan", phase="running", gate=self._trigger_gate(force))
+                        self.inet.wait_for_network()
+                        await wait_for_device(self.tl)
+                        log.info(f"Total entities queued for scan: {len(entities)}")
+                        log.info(
+                            f"Trigerring scan for:\n{subject.model_dump_json(indent=4)}"
+                        )
+                        await self.entity_scan.trigger(parameters={"url": subject.url}, force=force)
+                        self._set_state(
+                            "entity-scan",
+                            gate=_gate(True, "cooldown", f"ran — next run allowed in up to {Config.get('SCAN_WAIT')}s"),
+                        )
+                        await self.wait_until("entity-scan", "SCAN_WAIT")
+                    else:
+                        self._set_state(
+                            "entity-scan",
+                            gate=_gate(
+                                False,
+                                "backpressure",
+                                f"scanned+gender_invalid+gender_valid+scrape_queued = {count} ≥ "
+                                f"SCAN_RESERVE_TARGET = {target} (next queued entity is a public profile)",
+                            ),
+                        )
                 else:
                     self._set_state(
                         "entity-scan", gate=_gate(False, "no_work", "no queued entities")
