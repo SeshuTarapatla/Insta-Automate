@@ -178,7 +178,7 @@ class Prefect:
                 "backpressure target",
             )
         if force:
-            return _gate(True, "forced", "triggered via Force run, bypassing the gate")
+            return _gate(True, "forced", "triggered via Trigger now, bypassing the gate")
         return _gate(True)
 
     async def ping_telegram(self):
