@@ -324,6 +324,10 @@ class Prefect:
                         f"Trigerring scan for:\n{entities[0].model_dump_json(indent=4)}"
                     )
                     await self.entity_scan.trigger(parameters={"url": entities[0].url}, force=force)
+                    self._set_state(
+                        "entity-scan",
+                        gate=_gate(True, "cooldown", f"ran — next run allowed in up to {Config.get('SCAN_WAIT')}s"),
+                    )
                     await self.wait_until("entity-scan", "SCAN_WAIT")
                 else:
                     self._set_state(
@@ -357,6 +361,12 @@ class Prefect:
                     log.info("Queued entities are requested to scrape.")
                     await self.entity_scrape.trigger(parameters={"force": force}, force=force)
                     await self.ping_telegram()
+                    self._set_state(
+                        "entity-scrape",
+                        gate=_gate(
+                            True, "cooldown", f"ran — next run allowed in up to {Config.get('SCRAPE_WAIT')}s"
+                        ),
+                    )
                     await self.wait_until("entity-scrape", "SCRAPE_WAIT")
                 else:
                     self._set_state(
@@ -394,6 +404,12 @@ class Prefect:
                     log.info("Queued entities found to follow.")
                     await self.entity_follow.trigger(parameters={"force": force}, force=force)
                     await self.ping_telegram()
+                    self._set_state(
+                        "entity-follow",
+                        gate=_gate(
+                            True, "cooldown", f"ran — next run allowed in up to {Config.get('FOLLOW_WAIT')}s"
+                        ),
+                    )
                     await self.wait_until("entity-follow", "FOLLOW_WAIT")
                 else:
                     self._set_state(
