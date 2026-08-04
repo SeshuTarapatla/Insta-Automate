@@ -169,7 +169,14 @@ class Prefect:
     def _pending(self, flow: str, command: str) -> bool:
         return command in self._commands.get(flow, [])
 
-    def _trigger_gate(self, force: bool) -> dict[str, Any]:
+    def _trigger_gate(self, force: bool, reduce_reserve: bool = False) -> dict[str, Any]:
+        if reduce_reserve:
+            return _gate(
+                True,
+                "reduce_reserve",
+                "triggered via Reduce reserve — draining scraped+follow_queued to the "
+                "backpressure target",
+            )
         if force:
             return _gate(True, "forced", "triggered via Force run, bypassing the gate")
         return _gate(True)
@@ -201,7 +208,7 @@ class Prefect:
             # without ever reaching the trigger branch. The outer loop's
             # `continue` re-enters the top of the trigger loop, where the
             # real `_consume` picks it up and actually bypasses the gate.
-            if flow and self._pending(flow, "force_run"):
+            if flow and (self._pending(flow, "force_run") or self._pending(flow, "reduce_reserve")):
                 return
             await asyncio.sleep(Config.get("DAY_CHANGE_POLL"))
 
@@ -240,6 +247,8 @@ class Prefect:
             for wake in ("skip_wait", "run_now", "reload_config"):
                 if self._consume(flow, wake):
                     return wake
+            if self._pending(flow, "reduce_reserve"):
+                return "reduce_reserve"
             if self._pending(flow, "force_run"):
                 return "force_run"
             new_target = Config.get(key)
@@ -391,7 +400,8 @@ class Prefect:
         while True:
             try:
                 follow = Follow.fetch(self.session)
-                force = self._consume("entity-follow", "force_run")
+                reduce_reserve = self._consume("entity-follow", "reduce_reserve")
+                force = self._consume("entity-follow", "force_run") or reduce_reserve
                 if follow.limit_reached and not force:
                     log.info(
                         "Follow limit reached for the day. Pausing trigger until next day."
@@ -399,10 +409,14 @@ class Prefect:
                     await self.wait_day_change(Timestamp().date(), flow="entity-follow")
                     continue
                 if jpegs(FOLLOW_QUEUE_DIR):
-                    self._set_state("entity-follow", phase="running", gate=self._trigger_gate(force))
+                    self._set_state(
+                        "entity-follow", phase="running", gate=self._trigger_gate(force, reduce_reserve)
+                    )
                     await wait_for_device(self.tl)
                     log.info("Queued entities found to follow.")
-                    await self.entity_follow.trigger(parameters={"force": force}, force=force)
+                    await self.entity_follow.trigger(
+                        parameters={"force": force, "reduce_reserve": reduce_reserve}, force=force
+                    )
                     await self.ping_telegram()
                     self._set_state(
                         "entity-follow",
