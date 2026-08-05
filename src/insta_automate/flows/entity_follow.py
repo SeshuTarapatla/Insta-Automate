@@ -30,6 +30,7 @@ async def entity_follow(
     n: int | None = None,
     force: bool = False,
     reduce_reserve: bool = False,
+    unblock_scrape: bool = False,
 ):
     log = get_run_logger()
     agent = AgentClient()
@@ -39,15 +40,16 @@ async def entity_follow(
     })
     n = n if n is not None else Limit.get("FOLLOW_BATCH")
     reserve_target = Limit.get("FOLLOW") * Limit.get("SCRAPE_RESERVE_FACTOR")
+    target = reserve_target - 1 if (reduce_reserve and unblock_scrape) else reserve_target
     pool_count = len(jpegs(SCRAPED_DIR) + jpegs(FOLLOW_QUEUE_DIR))
     followed, processed, follow_queue = 0, 0, FOLLOW_QUEUE.copy()
 
     def more_to_do() -> bool:
-        return pool_count > reserve_target if reduce_reserve else followed < n
+        return pool_count > target if reduce_reserve else followed < n
 
     if reduce_reserve and not more_to_do():
         log.info(
-            f"scraped+follow_queued already at {pool_count} ≤ reserve target {reserve_target} "
+            f"scraped+follow_queued already at {pool_count} ≤ target {target} "
             "— nothing to drain."
         )
 
@@ -81,7 +83,7 @@ async def entity_follow(
                 processed += 1
                 if reduce_reserve:
                     log.info(
-                        f"{processed}. pool {pool_count}→{reserve_target}: @{image}: Follow triggered"
+                        f"{processed}. pool {pool_count}→{target}: @{image}: Follow triggered"
                     )
                 else:
                     log.info(f"{processed}. {followed + 1}/{n}: @{image}: Follow triggered")
@@ -96,7 +98,7 @@ async def entity_follow(
         log.info(
             f"Follow flow complete. Total followed on {Timestamp().date()}: {follow.followed}/{Limit.get('FOLLOW')}"
             + (
-                f" · scraped+follow_queued now {pool_count} (target {reserve_target})"
+                f" · scraped+follow_queued now {pool_count} (target {target})"
                 if reduce_reserve else ""
             )
         )

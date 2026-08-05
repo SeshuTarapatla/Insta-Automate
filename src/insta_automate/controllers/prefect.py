@@ -244,7 +244,11 @@ class Prefect:
             # without ever reaching the trigger branch. The outer loop's
             # `continue` re-enters the top of the trigger loop, where the
             # real `_consume` picks it up and actually bypasses the gate.
-            if flow and (self._pending(flow, "force_run") or self._pending(flow, "reduce_reserve")):
+            if flow and (
+                self._pending(flow, "force_run")
+                or self._pending(flow, "reduce_reserve")
+                or self._pending(flow, "reduce_reserve_unblock_scrape")
+            ):
                 return
             await asyncio.sleep(Config.get("DAY_CHANGE_POLL"))
 
@@ -283,7 +287,7 @@ class Prefect:
             for wake in ("skip_wait", "run_now", "reload_config"):
                 if self._consume(flow, wake):
                     return wake
-            if self._pending(flow, "reduce_reserve"):
+            if self._pending(flow, "reduce_reserve") or self._pending(flow, "reduce_reserve_unblock_scrape"):
                 return "reduce_reserve"
             if self._pending(flow, "force_run"):
                 return "force_run"
@@ -448,7 +452,8 @@ class Prefect:
         while True:
             try:
                 follow = Follow.fetch(self.session)
-                reduce_reserve = self._consume("entity-follow", "reduce_reserve")
+                unblock_scrape = self._consume("entity-follow", "reduce_reserve_unblock_scrape")
+                reduce_reserve = self._consume("entity-follow", "reduce_reserve") or unblock_scrape
                 force = self._consume("entity-follow", "force_run") or reduce_reserve
                 if follow.limit_reached and not force:
                     log.info(
@@ -463,7 +468,12 @@ class Prefect:
                     await wait_for_device(self.tl)
                     log.info("Queued entities found to follow.")
                     await self.entity_follow.trigger(
-                        parameters={"force": force, "reduce_reserve": reduce_reserve}, force=force
+                        parameters={
+                            "force": force,
+                            "reduce_reserve": reduce_reserve,
+                            "unblock_scrape": unblock_scrape,
+                        },
+                        force=force,
                     )
                     await self.ping_telegram()
                     self._set_state(
