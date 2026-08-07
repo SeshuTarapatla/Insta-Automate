@@ -491,6 +491,7 @@ async def profile_scrape(
         # the device mid-navigation (options menu / about page), which would
         # break the profile screenshot below.
         device.open_entity(entity)
+        ui.profile_posts.wait()
 
     profile_page = ui.profile_page.screenshot()
     crop_height = int(ui.profile_follow_button.center()[-1])
