@@ -485,6 +485,13 @@ async def profile_scrape(
         })
         return False
 
+    if user.p == 0:
+        # determine_year_joined() only returns to the profile page on its own
+        # success path - on any exception (caught, returns None) it can leave
+        # the device mid-navigation (options menu / about page), which would
+        # break the profile screenshot below.
+        device.open_entity(entity)
+
     profile_page = ui.profile_page.screenshot()
     crop_height = int(ui.profile_follow_button.center()[-1])
     profile_header = profile_page.crop((0, 0, profile_page.width, crop_height))
